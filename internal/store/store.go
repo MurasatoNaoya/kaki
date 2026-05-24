@@ -67,3 +67,24 @@ func (s *Store) Undo() {
 func (s *Store) Clear() {
 	s.strokes = nil
 }
+
+// SetColor sets the pen colour applied to subsequently begun strokes.
+func (s *Store) SetColor(r, g, b, a float64) {
+	s.penR, s.penG, s.penB, s.penA = r, g, b, a
+}
+
+// SetWidth sets the pen width applied to subsequently begun strokes.
+func (s *Store) SetWidth(w float64) {
+	s.penWidth = w
+}
+
+// DrawMode reports whether drawing is currently enabled.
+func (s *Store) DrawMode() bool {
+	return s.drawMode
+}
+
+// ToggleMode flips draw mode and returns the new state.
+func (s *Store) ToggleMode() bool {
+	s.drawMode = !s.drawMode
+	return s.drawMode
+}

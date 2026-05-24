@@ -68,3 +68,35 @@ func TestClearRemovesAllStrokes(t *testing.T) {
 		t.Fatalf("want 0 strokes after clear, got %d", len(s.strokes))
 	}
 }
+
+func TestSetColorAndWidthApplyToNextStroke(t *testing.T) {
+	s := New()
+	s.SetColor(0, 0, 1, 1) // blue
+	s.SetWidth(7)
+	s.BeginStroke(0, 0)
+	s.EndStroke()
+
+	st := s.strokes[0]
+	if st.B != 1 || st.R != 0 || st.G != 0 || st.A != 1 {
+		t.Fatalf("colour not applied: %+v", st)
+	}
+	if st.Width != 7 {
+		t.Fatalf("width not applied: %v", st.Width)
+	}
+}
+
+func TestToggleModeFlipsAndReturnsNewState(t *testing.T) {
+	s := New()
+	if s.DrawMode() {
+		t.Fatal("draw mode should default to off")
+	}
+	if got := s.ToggleMode(); got != true {
+		t.Fatalf("first toggle should return true, got %v", got)
+	}
+	if !s.DrawMode() {
+		t.Fatal("draw mode should be on after toggle")
+	}
+	if got := s.ToggleMode(); got != false {
+		t.Fatalf("second toggle should return false, got %v", got)
+	}
+}
