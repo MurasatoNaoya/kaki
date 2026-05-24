@@ -4,8 +4,18 @@
 #include "_cgo_export.h" // declares goBeginStroke, goAddPoint, ... goSnapshot, etc.
 
 // Globals so the hotkey handler and menu can reach the window/view.
+// These are allocated once in RunApp and intentionally owned for the
+// process lifetime (never released under MRC).
 static NSWindow *gWindow = nil;
 static NSView   *gCanvas = nil;
+
+// Borderless/non-activating panels won't become key by default, so clicks
+// are dropped. Override canBecomeKeyWindow so the overlay receives mouse input.
+@interface OverlayPanel : NSPanel
+@end
+@implementation OverlayPanel
+- (BOOL)canBecomeKeyWindow { return YES; }
+@end
 
 // ---- Canvas: renders Go's snapshot and forwards mouse input to Go ----
 
@@ -15,6 +25,8 @@ static NSView   *gCanvas = nil;
 @implementation CanvasView
 
 - (BOOL)isFlipped { return NO; } // bottom-left origin, matches mouse coords
+
+- (BOOL)acceptsFirstMouse:(NSEvent *)e { return YES; } // first click after focus loss still draws
 
 - (void)drawRect:(NSRect)dirtyRect {
     [[NSColor clearColor] set];
@@ -74,6 +86,7 @@ static NSView   *gCanvas = nil;
 
 // ---- Menu bar: colour, width, clear, quit ----
 
+// Allocated once and owned for the process lifetime (never released under MRC).
 static NSStatusItem *gStatusItem = nil;
 
 @interface MenuController : NSObject
@@ -99,6 +112,7 @@ static NSStatusItem *gStatusItem = nil;
 
 @end
 
+// Allocated once and owned for the process lifetime (never released under MRC).
 static MenuController *gMenuController = nil;
 
 static void buildStatusItem(void) {
@@ -160,18 +174,36 @@ static OSStatus hotKeyHandler(EventHandlerCallRef next, EventRef e, void *ud) {
 
 static void registerHotKeys(void) {
     EventTypeSpec spec = { kEventClassKeyboard, kEventHotKeyPressed };
-    InstallApplicationEventHandler(&hotKeyHandler, 1, &spec, NULL, NULL);
+    OSStatus installStatus =
+        InstallApplicationEventHandler(&hotKeyHandler, 1, &spec, NULL, NULL);
+    if (installStatus != noErr) {
+        NSLog(@"screenpen: InstallApplicationEventHandler failed (status %d)",
+              (int)installStatus);
+    }
 
-    EventHotKeyRef ref;
-    // ⌥⌘D toggle draw mode. kVK_ANSI_D == 2.
+    // Refs are intentionally kept for the process lifetime (never unregistered).
+    EventHotKeyRef toggleRef;
+    EventHotKeyRef clearRef;
+
+    // ⌥⌘D toggle draw mode.
     EventHotKeyID toggleID = { 'tgld', HOTKEY_TOGGLE };
-    RegisterEventHotKey(2, optionKey | cmdKey, toggleID,
-                        GetApplicationEventTarget(), 0, &ref);
+    OSStatus toggleStatus =
+        RegisterEventHotKey(kVK_ANSI_D, optionKey | cmdKey, toggleID,
+                            GetApplicationEventTarget(), 0, &toggleRef);
+    if (toggleStatus != noErr) {
+        NSLog(@"screenpen: failed to register ⌥⌘D toggle hotkey (status %d)",
+              (int)toggleStatus);
+    }
 
-    // ⌥⌘C clear. kVK_ANSI_C == 8.
+    // ⌥⌘C clear.
     EventHotKeyID clearID = { 'tglc', HOTKEY_CLEAR };
-    RegisterEventHotKey(8, optionKey | cmdKey, clearID,
-                        GetApplicationEventTarget(), 0, &ref);
+    OSStatus clearStatus =
+        RegisterEventHotKey(kVK_ANSI_C, optionKey | cmdKey, clearID,
+                            GetApplicationEventTarget(), 0, &clearRef);
+    if (clearStatus != noErr) {
+        NSLog(@"screenpen: failed to register ⌥⌘C clear hotkey (status %d)",
+              (int)clearStatus);
+    }
 }
 
 // ---- Entry point ----
@@ -184,7 +216,7 @@ void RunApp(void) {
 
         NSRect frame = [[NSScreen mainScreen] frame];
 
-        gWindow = [[NSPanel alloc]
+        gWindow = [[OverlayPanel alloc]
             initWithContentRect:frame
                       styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel
                         backing:NSBackingStoreBuffered
