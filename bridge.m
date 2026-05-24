@@ -84,76 +84,6 @@ static NSView   *gCanvas = nil;
 
 @end
 
-// ---- Menu bar: colour, width, clear, quit ----
-
-// Allocated once and owned for the process lifetime (never released under MRC).
-static NSStatusItem *gStatusItem = nil;
-
-@interface MenuController : NSObject
-@end
-
-@implementation MenuController
-
-- (void)setRed:(id)s   { goSetColor(1, 0, 0, 1); }
-- (void)setGreen:(id)s { goSetColor(0, 0.7, 0, 1); }
-- (void)setBlue:(id)s  { goSetColor(0, 0, 1, 1); }
-- (void)setYellow:(id)s{ goSetColor(1, 0.85, 0, 1); }
-
-- (void)setThin:(id)s   { goSetWidth(2); }
-- (void)setMedium:(id)s { goSetWidth(5); }
-- (void)setThick:(id)s  { goSetWidth(10); }
-
-- (void)clearAll:(id)s {
-    goClear();
-    [gCanvas setNeedsDisplay:YES];
-}
-
-- (void)quit:(id)s { [NSApp terminate:nil]; }
-
-- (void)undo:(id)s {
-    goUndo();
-    [gCanvas setNeedsDisplay:YES];
-}
-
-@end
-
-// Allocated once and owned for the process lifetime (never released under MRC).
-static MenuController *gMenuController = nil;
-
-static void buildStatusItem(void) {
-    gStatusItem = [[NSStatusBar systemStatusBar]
-        statusItemWithLength:NSVariableStatusItemLength];
-    gStatusItem.button.title = @"✎ Pen";
-
-    gMenuController = [[MenuController alloc] init];
-    NSMenu *menu = [[NSMenu alloc] init];
-
-    NSMenu *colorMenu = [[NSMenu alloc] init];
-    [colorMenu addItemWithTitle:@"Red"    action:@selector(setRed:)    keyEquivalent:@""].target = gMenuController;
-    [colorMenu addItemWithTitle:@"Green"  action:@selector(setGreen:)  keyEquivalent:@""].target = gMenuController;
-    [colorMenu addItemWithTitle:@"Blue"   action:@selector(setBlue:)   keyEquivalent:@""].target = gMenuController;
-    [colorMenu addItemWithTitle:@"Yellow" action:@selector(setYellow:) keyEquivalent:@""].target = gMenuController;
-    NSMenuItem *colorItem = [[NSMenuItem alloc] initWithTitle:@"Colour" action:nil keyEquivalent:@""];
-    [colorItem setSubmenu:colorMenu];
-    [menu addItem:colorItem];
-
-    NSMenu *widthMenu = [[NSMenu alloc] init];
-    [widthMenu addItemWithTitle:@"Thin"   action:@selector(setThin:)   keyEquivalent:@""].target = gMenuController;
-    [widthMenu addItemWithTitle:@"Medium" action:@selector(setMedium:) keyEquivalent:@""].target = gMenuController;
-    [widthMenu addItemWithTitle:@"Thick"  action:@selector(setThick:)  keyEquivalent:@""].target = gMenuController;
-    NSMenuItem *widthItem = [[NSMenuItem alloc] initWithTitle:@"Width" action:nil keyEquivalent:@""];
-    [widthItem setSubmenu:widthMenu];
-    [menu addItem:widthItem];
-
-    [menu addItemWithTitle:@"Undo" action:@selector(undo:) keyEquivalent:@""].target = gMenuController;
-    [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItemWithTitle:@"Clear (⌥⌘C)" action:@selector(clearAll:) keyEquivalent:@""].target = gMenuController;
-    [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItemWithTitle:@"Quit" action:@selector(quit:) keyEquivalent:@""].target = gMenuController;
-
-    gStatusItem.menu = menu;
-}
-
 // ---- Global hotkeys (Carbon — no Accessibility permission needed) ----
 
 enum { HOTKEY_TOGGLE = 1, HOTKEY_CLEAR = 2 };
@@ -212,14 +142,44 @@ static void registerHotKeys(void) {
     }
 }
 
+// ---- App delegate: Dock reopen + standard app menu ----
+
+static NSPanel *gHUD = nil; // the control HUD, created in RunApp via KakiMakeHUD
+
+@interface KakiAppDelegate : NSObject <NSApplicationDelegate>
+@end
+
+@implementation KakiAppDelegate
+// Clicking the Dock icon (when the HUD was closed/hidden) re-shows it.
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)app hasVisibleWindows:(BOOL)vis {
+    if (gHUD) { [gHUD makeKeyAndOrderFront:nil]; }
+    return YES;
+}
+@end
+
+static KakiAppDelegate *gAppDelegate = nil;
+
+// Minimal main menu so ⌘Q works in a Regular app.
+static void buildAppMenu(void) {
+    NSMenu *mainMenu = [[NSMenu alloc] init];
+    NSMenuItem *appItem = [[NSMenuItem alloc] init];
+    [mainMenu addItem:appItem];
+    NSMenu *appMenu = [[NSMenu alloc] init];
+    [appMenu addItemWithTitle:@"Quit Kaki"
+                       action:@selector(terminate:)
+                keyEquivalent:@"q"];
+    [appItem setSubmenu:appMenu];
+    [NSApp setMainMenu:mainMenu];
+}
+
 // ---- Entry point ----
 
 void RunApp(void) {
     @autoreleasepool {
         [NSApplication sharedApplication];
-        // Accessory => menu-bar agent: no dock icon, does not steal focus.
-        // (Also set via LSUIElement in Info.plist; this is belt-and-suspenders.)
-        [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular]; // Dock app
+        gAppDelegate = [[KakiAppDelegate alloc] init];
+        [NSApp setDelegate:gAppDelegate];
 
         NSRect frame = [[NSScreen mainScreen] frame];
 
@@ -241,7 +201,7 @@ void RunApp(void) {
         [gWindow setContentView:gCanvas];
         [gWindow orderFrontRegardless];
 
-        buildStatusItem();
+        buildAppMenu();
         registerHotKeys();
 
         [NSApp run];

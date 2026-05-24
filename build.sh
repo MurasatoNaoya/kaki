@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
-# Build ScreenPen into a launchable .app bundle.
-#
-# macOS will only display a menu-bar status item and the overlay window when
-# the program runs as a bundled app launched through LaunchServices. Running
-# the bare binary directly from a shell does NOT get window-server privileges
-# (setActivationPolicy returns 0 and nothing appears). So we always build into
-# ScreenPen.app and launch with `open`.
+# Build Kaki into a launchable .app bundle.
+# macOS only shows the HUD/overlay when launched as a bundled app via LaunchServices
+# (`open Kaki.app`). Running the bare binary from a shell gets no window-server access.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="ScreenPen.app"
+APP="Kaki.app"
+RES="$APP/Contents/Resources"
 
 echo "Building binary..."
-go build -o screenpen .
+go build -o kaki .
 
 echo "Assembling $APP ..."
-mkdir -p "$APP/Contents/MacOS"
-cp screenpen "$APP/Contents/MacOS/screenpen"
-# Info.plist is committed under $APP/Contents/Info.plist (LSUIElement agent).
+mkdir -p "$APP/Contents/MacOS" "$RES"
+cp kaki "$APP/Contents/MacOS/kaki"
+cp Info.plist "$APP/Contents/Info.plist"
+# Bundled wordmark font (added in a later task); copy if present.
+if [ -f assets/fonts/ShipporiMincho-SemiBold.ttf ]; then
+  cp assets/fonts/ShipporiMincho-SemiBold.ttf "$RES/"
+fi
 
 echo "Done. Launch with:  open $APP"

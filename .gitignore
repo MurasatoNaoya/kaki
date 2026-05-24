@@ -1,5 +1,6 @@
 /screenpen
-ScreenPen.app/Contents/MacOS/
+/kaki
+Kaki.app/
 *.o
 *.a
 .DS_Store

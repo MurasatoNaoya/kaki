@@ -3,25 +3,23 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>ScreenPen</string>
+    <string>Kaki</string>
     <key>CFBundleDisplayName</key>
-    <string>ScreenPen</string>
+    <string>Kaki</string>
     <key>CFBundleIdentifier</key>
-    <string>com.screenpen.app</string>
+    <string>com.kaki.app</string>
     <key>CFBundleExecutable</key>
-    <string>screenpen</string>
+    <string>kaki</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>2.0</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>LSMinimumSystemVersion</key>
     <string>11.0</string>
-    <key>LSUIElement</key>
-    <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>
