@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaki · duotone persimmon logos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--kaki:#e0633a;--kaki-bright:#f0703f;--ink:#16140f;--paper:#efe9dd;--muted:#8a8273}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Zen Kaku Gothic New",sans-serif;
+    background:radial-gradient(130% 100% at 20% 0%,#26231c,#131210 60%,#0c0b08);color:var(--paper);min-height:100vh;padding:40px 32px 120px}
+  header{max-width:1200px;margin:0 auto 26px}
+  h1{font-family:"Shippori Mincho",serif;font-weight:700;font-size:28px}
+  h1 .k{color:var(--kaki)}
+  .sub{color:var(--muted);margin-top:8px;font-size:14px;line-height:1.6;max-width:700px}
+  .sub b{color:var(--paper)}
+  .grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:26px 20px}
+  .sec{grid-column:1/-1;margin-top:22px;display:flex;align-items:center;gap:14px}
+  .sec h2{font-family:"Shippori Mincho",serif;font-weight:600;font-size:15px;white-space:nowrap}
+  .sec .line{height:1px;background:linear-gradient(90deg,rgba(224,99,58,.5),transparent);flex:1}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;transition:transform .16s cubic-bezier(.2,.9,.25,1)}
+  .tile:hover{transform:translateY(-4px)}
+  .ico{position:relative;width:118px;height:118px;border-radius:27px;overflow:hidden;
+    box-shadow:0 14px 30px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
+  .ico svg{position:absolute;inset:0;width:100%;height:100%}
+  .num{font-size:11.5px;color:var(--muted)}.num b{color:var(--paper);font-weight:600}
+  .tile.picked .ico{box-shadow:0 0 0 3px var(--kaki-bright),0 14px 30px -8px rgba(224,99,58,.5)}
+  .tile.picked .num b{color:var(--kaki-bright)}
+  .tick{position:absolute;top:6px;right:6px;width:19px;height:19px;border-radius:50%;background:var(--kaki-bright);color:#fff;
+    display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .tile.picked .tick{display:flex}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(18,16,12,.86);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+    border-top:1px solid rgba(255,255,255,.1);padding:14px 24px;z-index:10}
+  .bar .inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px;font-size:14px}
+  .bar b{color:var(--kaki-bright)}.bar .hint{color:var(--muted);font-size:12px}
+  .bar button{margin-left:auto;background:var(--kaki);color:#fff;border:none;border-radius:9px;padding:8px 16px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>柿 <span class="k">kaki</span> · duotone persimmons</h1>
+  <p class="sub">Many variations on the <b>#15 duotone direction</b> — minimal two-tone persimmons with the distinct calyx top. Click favourites; numbers collect below.</p>
+</header>
+<div class="grid" id="grid"></div>
+<div class="bar"><div class="inner">
+  <span>Picked: <b id="picks">none yet</b></span><span class="hint">click to toggle</span>
+  <button onclick="copyPicks()">Copy numbers</button>
+</div></div>
+<script>
+const KAKI="#e0633a",KAKI_D="#b8431f",KAKI_L="#f29360",INK="#1c1812",SUMI="#2c2418",PAPER="#efe9dd",CREAM="#f6efe0",CALYX="#6f7330",OLIVE="#525a26",GOLD="#e0a23a",DEEP="#8a3b22";
+const BG={washi:"linear-gradient(150deg,#f6efe0,#e7dcc4)",sumi:"linear-gradient(150deg,#242017,#100e0a)",
+  persimmon:"linear-gradient(150deg,#f07a45,#c8492a)",ink:"#14110d",cream:"#f3ecdd"};
+const S=(i)=>`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${i}</svg>`;
+const BODY="M50 36 C72 36 84 46 84 58 C84 72 69 81 50 81 C31 81 16 72 16 58 C16 46 28 36 50 36 Z";
+const CAL ="M50 23 C45 23 42 27 40 32 C34 29 27 31 25 38 C32 41 39 40 45 37 C46 43 48 47 50 47 C52 47 54 43 55 37 C61 40 68 41 75 38 C73 31 66 29 60 32 C58 27 55 23 50 23 Z";
+let cid=0;
+
+// one persimmon silhouette, translated & scaled about centre
+function sil(color,tx,ty,sc){
+  const t=`translate(${tx} ${ty}) translate(50 50) scale(${sc}) translate(-50 -50)`;
+  return `<g transform="${t}"><path d="${BODY}" fill="${color}"/><path d="${CAL}" fill="${color}"/>
+    <rect x="48" y="17" width="4" height="8" rx="2" fill="${color}"/></g>`;
+}
+// overlapping pair (the #15 look) — back tone + front tone
+function pair(front,back,{dx=12,dy=4,sc=.78}={}){
+  return S(sil(back,-dx,dy,sc)+sil(front,dx,-dy,sc));
+}
+// trio
+function trio(c1,c2,c3,{sc=.62}={}){
+  return S(sil(c3,-18,8,sc)+sil(c2,0,-2,sc)+sil(c1,18,8,sc));
+}
+// single persimmon, body vs calyx two-tone
+function bodyCalyx(body,calyx){
+  return S(`<path d="${BODY}" fill="${body}"/><rect x="48" y="17" width="4" height="8" rx="2" fill="${calyx}"/><path d="${CAL}" fill="${calyx}"/>`);
+}
+// vertical split (left / right halves two tones)
+function splitV(left,right){
+  const a=cid++,b=cid++;
+  return S(`<defs><clipPath id="l${a}"><rect x="0" y="0" width="50" height="100"/></clipPath>
+    <clipPath id="r${b}"><rect x="50" y="0" width="50" height="100"/></clipPath></defs>
+    <g clip-path="url(#l${a})"><path d="${BODY}" fill="${left}"/><path d="${CAL}" fill="${left}"/><rect x="48" y="17" width="4" height="8" rx="2" fill="${left}"/></g>
+    <g clip-path="url(#r${b})"><path d="${BODY}" fill="${right}"/><path d="${CAL}" fill="${right}"/><rect x="48" y="17" width="4" height="8" rx="2" fill="${right}"/></g>`);
+}
+// horizontal split (calyx+top tone / lower body tone)
+function splitH(top,bottom,y){
+  const a=cid++,b=cid++;y=y||50;
+  return S(`<defs><clipPath id="t${a}"><rect x="0" y="0" width="100" height="${y}"/></clipPath>
+    <clipPath id="b${b}"><rect x="0" y="${y}" width="100" height="${100-y}"/></clipPath></defs>
+    <g clip-path="url(#t${a})"><path d="${BODY}" fill="${top}"/><path d="${CAL}" fill="${top}"/><rect x="48" y="17" width="4" height="8" rx="2" fill="${top}"/></g>
+    <g clip-path="url(#b${b})"><path d="${BODY}" fill="${bottom}"/></g>`);
+}
+// offset flat shadow (minimal duotone)
+function shadowMark(body,shadow){
+  return S(sil(shadow,7,6,.84)+sil(body,-3,-2,.84));
+}
+// top-down duo (two calyx-stars / discs offset)
+function topDuo(front,back){
+  const leaf="M50 52 C44 43 44 33 50 29 C56 33 56 43 50 52 Z";
+  const star=(c)=>`<g fill="${c}"><circle cx="50" cy="52" r="26" fill="${c}"/></g>`;
+  const cal=(c)=>`<g fill="${c}"><path d="${leaf}"/><path d="${leaf}" transform="rotate(90 50 52)"/><path d="${leaf}" transform="rotate(180 50 52)"/><path d="${leaf}" transform="rotate(270 50 52)"/></g>`;
+  return S(`<g transform="translate(-12 6) scale(.8)">${star(back)}</g>
+           <g transform="translate(12 -4) scale(.8)">${star(front)}${cal(CALYX)}</g>`);
+}
+
+// ---------- build many ----------
+const pairs=[ // [front, back, label]
+ [KAKI,INK,"persimmon + sumi"],[KAKI,KAKI_D,"persimmon + deep"],[KAKI,GOLD,"persimmon + gold"],
+ [KAKI,CALYX,"persimmon + olive"],[KAKI_L,KAKI_D,"light + dark"],[GOLD,KAKI_D,"gold + deep"],
+ [CREAM,KAKI,"cream + persimmon"],[KAKI,DEEP,"persimmon + rust"]];
+
+const C=[["Overlapping pairs (like #15)",null]];
+// pairs on washi
+pairs.forEach(p=>C.push([BG.washi,pair(p[0],p[1]),p[2]+" · washi"]));
+// pairs on sumi (front lighter for contrast)
+pairs.forEach(p=>C.push([BG.sumi,pair(p[0],p[1]),p[2]+" · sumi"]));
+
+C.push(["Tighter / looser overlap",null]);
+C.push([BG.washi,pair(KAKI,INK,{dx:7,dy:2}),"tight overlap"]);
+C.push([BG.washi,pair(KAKI,INK,{dx:18,dy:6}),"loose overlap"]);
+C.push([BG.sumi,pair(KAKI,PAPER,{dx:7,dy:2}),"tight (sumi)"]);
+C.push([BG.sumi,pair(KAKI,GOLD,{dx:18,dy:8}),"loose (sumi)"]);
+C.push([BG.cream,pair(KAKI,KAKI_D,{dx:10,dy:0}),"level overlap"]);
+C.push([BG.washi,pair(KAKI_D,KAKI,{dx:12,dy:-6}),"rising overlap"]);
+
+C.push(["Trios",null]);
+C.push([BG.washi,trio(KAKI,KAKI_D,INK),"trio · sumi back"]);
+C.push([BG.sumi,trio(KAKI_L,KAKI,KAKI_D),"trio · persimmon tones"]);
+C.push([BG.washi,trio(KAKI,GOLD,DEEP),"trio · warm"]);
+C.push([BG.cream,trio(KAKI,KAKI,KAKI),"trio · mono"]);
+
+C.push(["Single, two-tone",null]);
+C.push([BG.washi,bodyCalyx(KAKI,CALYX),"body + olive calyx"]);
+C.push([BG.washi,bodyCalyx(KAKI,INK),"body + sumi calyx"]);
+C.push([BG.sumi,bodyCalyx(KAKI,GOLD),"body + gold calyx"]);
+C.push([BG.washi,splitV(KAKI,KAKI_D),"split L/R"]);
+C.push([BG.sumi,splitV(KAKI,PAPER),"split L/R (sumi)"]);
+C.push([BG.washi,splitH(CALYX,KAKI),"calyx-zone two-tone"]);
+C.push([BG.washi,splitH(KAKI_L,KAKI_D,55),"sun/shade halves"]);
+C.push([BG.cream,bodyCalyx(KAKI_D,KAKI),"deep body + bright calyx"]);
+
+C.push(["Offset shadow",null]);
+C.push([BG.washi,shadowMark(KAKI,INK),"persimmon + sumi shadow"]);
+C.push([BG.washi,shadowMark(KAKI,KAKI_D),"persimmon + deep shadow"]);
+C.push([BG.sumi,shadowMark(KAKI,"#000"),"shadow (sumi)"]);
+C.push([BG.cream,shadowMark(GOLD,KAKI_D),"gold + rust shadow"]);
+
+C.push(["Top-down duo",null]);
+C.push([BG.washi,topDuo(KAKI,KAKI_D),"top-down pair"]);
+C.push([BG.sumi,topDuo(KAKI_L,KAKI_D),"top-down pair (sumi)"]);
+
+// ---------- render ----------
+const grid=document.getElementById('grid');let n=0;const picks=new Set();
+C.forEach(e=>{
+  if(e[1]===null){const h=document.createElement('div');h.className='sec';h.innerHTML=`<h2>${e[0]}</h2><div class="line"></div>`;grid.appendChild(h);return;}
+  n++;const[bg,svg,label]=e;const num=n;
+  const t=document.createElement('div');t.className='tile';
+  t.innerHTML=`<div class="ico" style="background:${bg}">${svg}<div class="tick">✓</div></div><div class="num">#<b>${num}</b> · ${label}</div>`;
+  t.addEventListener('click',()=>{t.classList.toggle('picked');if(t.classList.contains('picked'))picks.add(num);else picks.delete(num);render();});
+  grid.appendChild(t);
+});
+function render(){const a=[...picks].sort((x,y)=>x-y);document.getElementById('picks').textContent=a.length?a.map(x=>'#'+x).join(', '):'none yet';}
+function copyPicks(){const a=[...picks].sort((x,y)=>x-y).map(x=>'#'+x).join(', ');navigator.clipboard.writeText(a||'').then(()=>{});}
+</script>
+</body>
+</html>

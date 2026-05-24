@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaki · persimmon logo concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{--kaki:#e0633a;--kaki-bright:#f0703f;--ink:#16140f;--paper:#efe9dd;--muted:#8a8273}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Zen Kaku Gothic New",sans-serif;
+    background:radial-gradient(130% 100% at 20% 0%,#26231c,#131210 60%,#0c0b08);
+    color:var(--paper);min-height:100vh;padding:40px 32px 120px}
+  header{max-width:1200px;margin:0 auto 28px}
+  h1{font-family:"Shippori Mincho",serif;font-weight:700;font-size:30px}
+  h1 .k{color:var(--kaki)}
+  .sub{color:var(--muted);margin-top:8px;font-size:14px;line-height:1.6;max-width:680px}
+  .sub b{color:var(--paper)}
+  .grid{max-width:1200px;margin:0 auto;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:28px 22px}
+  .sec{grid-column:1/-1;margin-top:24px;display:flex;align-items:center;gap:14px}
+  .sec h2{font-family:"Shippori Mincho",serif;font-weight:600;font-size:16px;white-space:nowrap}
+  .sec .line{height:1px;background:linear-gradient(90deg,rgba(224,99,58,.5),transparent);flex:1}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;
+    transition:transform .18s cubic-bezier(.2,.9,.25,1)}
+  .tile:hover{transform:translateY(-4px)}
+  .ico{position:relative;width:124px;height:124px;border-radius:28px;overflow:hidden;
+    box-shadow:0 14px 30px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
+  .ico svg{position:absolute;inset:0;width:100%;height:100%}
+  .ico .glass-hi{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 42%)}
+  .num{font-size:12px;color:var(--muted)}
+  .num b{color:var(--paper);font-weight:600}
+  .tile.picked .ico{box-shadow:0 0 0 3px var(--kaki-bright),0 14px 30px -8px rgba(224,99,58,.5)}
+  .tile.picked .num b{color:var(--kaki-bright)}
+  .tick{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;
+    background:var(--kaki-bright);color:#fff;display:none;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+  .tile.picked .tick{display:flex}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(18,16,12,.86);
+    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+    border-top:1px solid rgba(255,255,255,.1);padding:14px 24px;z-index:10}
+  .bar .inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px;font-size:14px}
+  .bar b{color:var(--kaki-bright)}
+  .bar .hint{color:var(--muted);font-size:12px}
+  .bar button{margin-left:auto;background:var(--kaki);color:#fff;border:none;border-radius:9px;
+    padding:8px 16px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>柿 <span class="k">kaki</span> · persimmon logo concepts</h1>
+  <p class="sub"><b>Persimmon-fruit logos only</b>, accurate Fuyu shape (oblate body, broad flat calyx). Click the ones you like — numbers collect below — then tell me which. We’ll refine the winner into the real Dock icon.</p>
+</header>
+<div class="grid" id="grid"></div>
+<div class="bar"><div class="inner">
+  <span>Picked: <b id="picks">none yet</b></span>
+  <span class="hint">click an icon to toggle</span>
+  <button onclick="copyPicks()">Copy numbers</button>
+</div></div>
+<script>
+const KAKI="#e0633a",KAKI_D="#c8492a",KAKI_L="#f08a52",INK="#16140f",PAPER="#efe9dd",CREAM="#f6efe0",CALYX="#6f7330",GOLD="#e0a23a";
+const BG={sumi:"linear-gradient(150deg,#242017,#100e0a)",persimmon:"linear-gradient(150deg,#f07a45,#c8492a)",
+  washi:"linear-gradient(150deg,#f6efe0,#e7dcc4)",ink:"#14110d",
+  glass:"linear-gradient(150deg,rgba(70,64,54,.55),rgba(26,24,18,.78))",
+  glassP:"linear-gradient(150deg,rgba(240,122,69,.6),rgba(150,60,38,.5))"};
+const S=(i)=>`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${i}</svg>`;
+function shade(hex,amt){const c=hex.replace('#','');const f=c.length===3?c.split('').map(x=>x+x).join(''):c;
+  let r=parseInt(f.substr(0,2),16),g=parseInt(f.substr(2,2),16),b=parseInt(f.substr(4,2),16);
+  const t=amt<0?0:255,p=Math.abs(amt);r=Math.round((t-r)*p+r);g=Math.round((t-g)*p+g);b=Math.round((t-b)*p+b);
+  return `rgb(${r},${g},${b})`;}
+
+// --- accurate side-view Fuyu persimmon ---
+const BODY="M50 36 C72 36 84 46 84 58 C84 72 69 81 50 81 C31 81 16 72 16 58 C16 46 28 36 50 36 Z";
+const CAL ="M50 23 C45 23 42 27 40 32 C34 29 27 31 25 38 C32 41 39 40 45 37 C46 43 48 47 50 47 C52 47 54 43 55 37 C61 40 68 41 75 38 C73 31 66 29 60 32 C58 27 55 23 50 23 Z";
+function side(body,{style="flat",calyx=CALYX}={}){
+  const stem=`<rect x="48" y="17" width="4" height="8" rx="2" fill="#7a5a30"/>`;
+  if(style==="line") return S(`<rect x="48" y="17" width="4" height="8" rx="2" fill="none" stroke="${body}" stroke-width="2"/>
+    <path d="${BODY}" fill="none" stroke="${body}" stroke-width="3.6"/>
+    <path d="${CAL}" fill="none" stroke="${body}" stroke-width="2.8" stroke-linejoin="round"/>`);
+  if(style==="silhouette") return S(`<path d="${BODY}" fill="${body}"/><path d="${CAL}" fill="${body}"/>
+    <rect x="48" y="17" width="4" height="8" rx="2" fill="${body}"/>`);
+  const dk=shade(body,-0.18);const gl=style==="glossy"?`<ellipse cx="40" cy="50" rx="11" ry="7" fill="rgba(255,255,255,.42)"/>`:"";
+  return S(`${stem}<path d="${BODY}" fill="${dk}"/>
+    <path d="M50 39 C69 39 79 47 79 57 C79 67 66 73 50 73 C34 73 21 67 21 57 C21 47 31 39 50 39 Z" fill="${body}"/>
+    <g stroke="${dk}" stroke-width="1.6" fill="none" opacity=".5" stroke-linecap="round"><path d="M37 41 C33 53 33 66 39 77"/><path d="M63 41 C67 53 67 66 61 77"/></g>
+    ${gl}<path d="${CAL}" fill="${calyx}"/>`);
+}
+// --- top-down: round fruit + 4-lobe calyx star centred ---
+function topDown(body,{calyx=CALYX}={}){
+  const leaf="M50 52 C44 43 44 33 50 29 C56 33 56 43 50 52 Z";
+  return S(`<circle cx="50" cy="52" r="32" fill="${body}"/>
+    <circle cx="50" cy="52" r="32" fill="none" stroke="${shade(body,-0.18)}" stroke-width="1.4" opacity=".5"/>
+    <g fill="${calyx}"><path d="${leaf}"/><path d="${leaf}" transform="rotate(90 50 52)"/>
+    <path d="${leaf}" transform="rotate(180 50 52)"/><path d="${leaf}" transform="rotate(270 50 52)"/>
+    <circle cx="50" cy="52" r="3.5" fill="${shade(calyx,-0.18)}"/></g>`);
+}
+// --- sliced cross-section: skin ring + flesh + 8-petal seed star ---
+function section(body){
+  const petal="M50 52 C47.5 45 47.5 38 50 35 C52.5 38 52.5 45 50 52 Z";
+  let star="";for(let a=0;a<360;a+=45)star+=`<path d="${petal}" transform="rotate(${a} 50 52)"/>`;
+  return S(`<circle cx="50" cy="52" r="33" fill="${shade(body,-0.12)}"/>
+    <circle cx="50" cy="52" r="27" fill="${shade(body,0.16)}"/>
+    <g fill="${shade(body,-0.05)}" opacity=".55">${star}</g>
+    <circle cx="50" cy="52" r="3" fill="${shade(body,-0.2)}"/>`);
+}
+// --- modern leaf + fruit ---
+function leafFruit(body,{leaf=CALYX,bg=null}={}){
+  return S(`${bg?`<rect width="100" height="100" fill="${bg}"/>`:""}
+    <path d="M58 28 C70 24 80 30 80 30 C80 30 74 44 62 44 C54 44 52 36 58 28 Z" fill="${leaf}"/>
+    <path d="M60 30 C56 36 54 41 53 46" stroke="${shade(leaf,-0.2)}" stroke-width="1.4" fill="none"/>
+    <ellipse cx="46" cy="60" rx="28" ry="24" fill="${body}"/>
+    <ellipse cx="46" cy="60" rx="28" ry="24" fill="none" stroke="${shade(body,-0.18)}" stroke-width="1.3" opacity=".5"/>
+    <ellipse cx="38" cy="52" rx="8" ry="5" fill="rgba(255,255,255,.35)"/>`);
+}
+// --- duotone overlapping persimmons ---
+function duo(body){
+  return S(`<g><path d="${BODY}" transform="translate(-9,4) scale(.82)" transform-origin="50 50" fill="${shade(body,-0.22)}"/>
+    <path d="${CAL}" transform="translate(-9,4) scale(.82)" transform-origin="50 50" fill="${shade(CALYX,-0.15)}"/></g>
+    <g><path d="${BODY}" transform="translate(11,-2) scale(.82)" transform-origin="50 50" fill="${body}"/>
+    <path d="${CAL}" transform="translate(11,-2) scale(.82)" transform-origin="50 50" fill="${CALYX}"/></g>`);
+}
+// --- single continuous line mark ---
+function oneLine(fg){
+  return S(`<path d="M50 30 C40 30 33 34 33 34 M33 34 C20 40 18 56 30 68 C42 80 64 80 74 66 C82 55 78 40 67 34 C67 34 60 30 50 30 Z"
+     fill="none" stroke="${fg}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+     <path d="M50 30 C50 24 49 20 49 18" stroke="${fg}" stroke-width="4" stroke-linecap="round" fill="none"/>`);
+}
+// --- emblem ring + top-down + KAKI ---
+function emblem(body,ring,txt){
+  return S(`<circle cx="50" cy="50" r="42" fill="none" stroke="${ring}" stroke-width="2"/>
+    <g transform="translate(0,-6) scale(.62)" transform-origin="50 50">${topDown(body).replace(/<svg[^>]*>|<\/svg>/g,'')}</g>
+    <text x="50" y="80" text-anchor="middle" font-family="'Zen Kaku Gothic New',sans-serif" font-weight="700"
+      font-size="11" letter-spacing="3" fill="${txt}">KAKI</text>`);
+}
+// --- lockup: fruit + kaki wordmark ---
+function lockup(body,txt,{mark="side"}={}){
+  const m = mark==="top"?topDown(body):side(body);
+  return S(`<g transform="translate(0,-12) scale(.6)" transform-origin="50 50">${m.replace(/<svg[^>]*>|<\/svg>/g,'')}</g>
+    <text x="50" y="84" text-anchor="middle" font-family="'Shippori Mincho',serif" font-weight="700"
+      font-size="18" fill="${txt}">kaki</text>`);
+}
+// --- negative-space: calyx punched out of fruit ---
+function negCalyx(body,hole){
+  return S(`<path d="${BODY}" fill="${body}"/><path d="${CAL}" fill="${hole}"/>
+    <rect x="48" y="17" width="4" height="8" rx="2" fill="${hole}"/>`);
+}
+// --- hanko-style persimmon stamp ---
+function stamp(){
+  return S(`<rect x="20" y="20" width="60" height="60" rx="10" fill="${KAKI}"/>
+    <path d="${BODY}" transform="scale(.62) translate(31,28)" fill="#fff"/>
+    <path d="${CAL}" transform="scale(.62) translate(31,28)" fill="#fff"/>`);
+}
+
+const C=[
+ ["Side view", null],
+ [BG.washi, side(KAKI), "Flat two-tone"],
+ [BG.sumi, side(KAKI,{style:"glossy"}), "Glossy"],
+ [BG.persimmon, side(CREAM,{style:"silhouette"}), "Cream silhouette"],
+ [BG.washi, side(INK,{style:"line"}), "Monoline (sumi)"],
+ [BG.sumi, side(KAKI,{style:"line"}), "Monoline (persimmon)"],
+ [BG.ink, side(GOLD,{style:"silhouette"}), "Gold silhouette"],
+
+ ["Top-down &amp; cross-section", null],
+ [BG.washi, topDown(KAKI), "Top-down calyx star"],
+ [BG.sumi, topDown(KAKI), "Top-down on sumi"],
+ [BG.persimmon, topDown(CREAM,{calyx:CREAM}), "Top-down knockout"],
+ [BG.washi, section(KAKI), "Sliced cross-section"],
+ [BG.sumi, section(KAKI), "Cross-section on sumi"],
+
+ ["Modern &amp; leaf", null],
+ [BG.washi, leafFruit(KAKI), "Leaf + fruit"],
+ [BG.sumi, leafFruit(KAKI), "Leaf + fruit (dark)"],
+ [BG.persimmon, leafFruit(CREAM,{leaf:CREAM}), "Leaf + fruit (mono)"],
+ [BG.washi, duo(KAKI), "Duotone pair"],
+ [BG.sumi, oneLine(KAKI), "One continuous line"],
+ [BG.washi, oneLine(INK), "One line (sumi)"],
+
+ ["Emblem &amp; lockup", null],
+ [BG.sumi, emblem(KAKI,KAKI,PAPER), "Emblem ring"],
+ [BG.washi, emblem(KAKI,INK,INK), "Emblem (washi)"],
+ [BG.washi, lockup(KAKI,INK), "Lockup — side + kaki"],
+ [BG.sumi, lockup(KAKI,PAPER,{mark:"top"}), "Lockup — top-down + kaki"],
+
+ ["Negative space &amp; stamp", null],
+ [BG.persimmon, negCalyx("#fff","rgba(0,0,0,0)"), "Calyx negative (persimmon)"],
+ [BG.washi, negCalyx(KAKI,"#f6efe0"), "Calyx punch (washi)"],
+ [BG.washi, stamp(), "Hanko stamp"],
+
+ ["Glass", null],
+ [BG.glass, side(KAKI,{style:"glossy"}), "Glass + glossy fruit", true],
+ [BG.glassP, topDown(CREAM,{calyx:CREAM}), "Liquid persimmon top-down", true],
+ [BG.glass, leafFruit(KAKI), "Glass + leaf fruit", true],
+];
+
+const grid=document.getElementById('grid');let n=0;const picks=new Set();
+C.forEach(e=>{
+  if(e[1]===null){const h=document.createElement('div');h.className='sec';
+    h.innerHTML=`<h2>${e[0]}</h2><div class="line"></div>`;grid.appendChild(h);return;}
+  n++;const[bg,svg,label,glass]=e;const num=n;
+  const t=document.createElement('div');t.className='tile';
+  t.innerHTML=`<div class="ico" style="background:${bg}">${svg}${glass?'<div class="glass-hi"></div>':''}<div class="tick">✓</div></div>
+    <div class="num">#<b>${num}</b> · ${label}</div>`;
+  t.addEventListener('click',()=>{t.classList.toggle('picked');
+    if(t.classList.contains('picked'))picks.add(num);else picks.delete(num);render();});
+  grid.appendChild(t);
+});
+function render(){const a=[...picks].sort((x,y)=>x-y);
+  document.getElementById('picks').textContent=a.length?a.map(x=>'#'+x).join(', '):'none yet';}
+function copyPicks(){const a=[...picks].sort((x,y)=>x-y).map(x=>'#'+x).join(', ');
+  navigator.clipboard.writeText(a||'').then(()=>{});}
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaki · #66 calyx seating</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--kaki:#e0633a;--paper:#efe9dd;--muted:#8a8273}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Zen Kaku Gothic New",sans-serif;background:radial-gradient(130% 100% at 20% 0%,#26231c,#131210 60%,#0c0b08);color:var(--paper);min-height:100vh;padding:40px 32px 116px}
+  header{max-width:1180px;margin:0 auto 24px}
+  h1{font-family:"Shippori Mincho",serif;font-weight:700;font-size:27px}h1 .k{color:var(--kaki)}
+  .sub{color:var(--muted);margin-top:8px;font-size:14px;max-width:700px;line-height:1.6}.sub b{color:var(--paper)}
+  .grid{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:24px 18px}
+  .sec{grid-column:1/-1;margin-top:20px;display:flex;align-items:center;gap:12px}
+  .sec h2{font-family:"Shippori Mincho",serif;font-weight:600;font-size:14px;white-space:nowrap}
+  .sec .line{height:1px;background:linear-gradient(90deg,rgba(224,99,58,.5),transparent);flex:1}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .14s ease}
+  .tile:hover{transform:translateY(-3px)}
+  .ico{position:relative;width:120px;height:120px;border-radius:27px;overflow:hidden;background:#f3ecdd;box-shadow:0 12px 26px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.5)}
+  .ico svg{position:absolute;inset:0;width:100%;height:100%}
+  .num{font-size:11px;color:var(--muted)}.num b{color:var(--paper);font-weight:600}
+  .tile.picked .ico{box-shadow:0 0 0 3px var(--kaki),0 12px 26px -8px rgba(224,99,58,.5)}
+  .tile.picked .num b{color:var(--kaki)}
+  .tick{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--kaki);color:#fff;display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+  .tile.picked .tick{display:flex}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(18,16,12,.88);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid rgba(255,255,255,.1);padding:13px 22px}
+  .bar .inner{max-width:1180px;margin:0 auto;display:flex;gap:14px;align-items:center;font-size:13.5px}
+  .bar b{color:var(--kaki)}.bar .hint{color:var(--muted);font-size:12px}
+  .bar button{margin-left:auto;background:var(--kaki);color:#fff;border:none;border-radius:9px;padding:7px 15px;font-family:inherit;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>柿 <span class="k">kaki</span> · #66 — seating the calyx</h1>
+  <p class="sub">Same rounded-square persimmon, fixing how the <b>calyx sits on the fruit</b>. Varying calyx height, size, and the body’s corner radius (wider flat top = better seat). Click the ones where the top sits right; tell me the number and I’ll ship that as the icon.</p>
+</header>
+<div class="grid" id="grid"></div>
+<div class="bar"><div class="inner"><span>Picked: <b id="picks">none yet</b></span><span class="hint">click to toggle</span><button onclick="copyPicks()">Copy numbers</button></div></div>
+<script>
+const KAKI="#e0633a",OLIVE="#6f7330";
+const S=(i)=>`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${i}</svg>`;
+// calyx centred at (50,37); base lobes ~y47, side lobes ~x34/66, stem above
+const CAL="M50 27 C46 27 44 30 43 34 C39 32 35 33 34 37 C38 39 43 38 46 36 C47 40 48 42 50 42 C52 42 53 40 54 36 C57 38 62 39 66 37 C65 33 61 32 57 34 C56 30 54 27 50 27 Z";
+// crown = stem + calyx, scaled about (50,37) and moved so its centre lands at (50,cy)
+function crown(cy,s){
+  const t=`translate(0 ${cy-37}) translate(50 37) scale(${s}) translate(-50 -37)`;
+  return `<g transform="${t}"><rect x="48" y="15" width="4" height="9" rx="2" fill="${OLIVE}"/><path d="${CAL}" fill="${OLIVE}"/></g>`;
+}
+// rounded-square body, centred horizontally; top edge at by
+function rsq(r, by, cy, s){
+  const w=56, x=(100-w)/2, h=40;
+  return S(`<rect x="${x}" y="${by}" width="${w}" height="${h}" rx="${r}" fill="${KAKI}"/>${crown(cy,s)}`);
+}
+
+const C=[];
+// Three corner radii (top flat-width = 56-2r): r=18 narrow top, r=13 medium, r=9 wide top.
+[["r18 · narrow top",18],["r13 · medium top",13],["r9 · wide flat top",9]].forEach(([label,r])=>{
+  C.push([`${label}`,null]);
+  // body top edge fixed at by=40; vary calyx seat height cy and scale s
+  const combos=[
+    [38,1.0,"calyx high"],
+    [41,1.0,"calyx on edge"],
+    [44,1.0,"calyx seated"],
+    [46,1.0,"calyx nestled"],
+    [44,0.85,"seated · small"],
+    [44,1.15,"seated · large"],
+    [47,0.9,"deep · small"],
+  ];
+  combos.forEach(([cy,s,l])=>C.push([r,40,cy,s,l]));
+});
+
+const grid=document.getElementById('grid');let n=0;const picks=new Set();
+C.forEach(e=>{
+  if(e[1]===null){const h=document.createElement('div');h.className='sec';h.innerHTML=`<h2>${e[0]}</h2><div class="line"></div>`;grid.appendChild(h);return;}
+  n++;const[r,by,cy,s,l]=e;const num=n;const svg=rsq(r,by,cy,s);
+  const t=document.createElement('div');t.className='tile';t.title=l;
+  t.innerHTML=`<div class="ico">${svg}<div class="tick">✓</div></div><div class="num">#<b>${num}</b> · ${l}</div>`;
+  t.addEventListener('click',()=>{t.classList.toggle('picked');if(t.classList.contains('picked'))picks.add(num);else picks.delete(num);render();});
+  grid.appendChild(t);
+});
+function render(){const a=[...picks].sort((x,y)=>x-y);document.getElementById('picks').textContent=a.length?a.map(x=>'#'+x).join(', '):'none yet';}
+function copyPicks(){const a=[...picks].sort((x,y)=>x-y).map(x=>'#'+x).join(', ');navigator.clipboard.writeText(a||'').then(()=>{});}
+</script>
+</body>
+</html>

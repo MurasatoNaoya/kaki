@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaki · final icon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--kaki:#e0633a;--paper:#efe9dd;--muted:#8a8273}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Zen Kaku Gothic New",sans-serif;background:radial-gradient(130% 100% at 20% 0%,#26231c,#131210 60%,#0c0b08);color:var(--paper);min-height:100vh;padding:42px 32px}
+  .wrap{max-width:980px;margin:0 auto}
+  h1{font-family:"Shippori Mincho",serif;font-weight:700;font-size:27px}h1 .k{color:var(--kaki)}
+  .sub{color:var(--muted);margin:8px 0 28px;font-size:14px;line-height:1.6;max-width:680px}.sub b{color:var(--paper)}
+  .hero{display:flex;gap:30px;align-items:center;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:30px;margin-bottom:30px}
+  .big{width:200px;height:200px;border-radius:46px;flex:none;overflow:hidden;background:#f3ecdd;box-shadow:0 18px 40px -14px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.6)}
+  .big svg{width:100%;height:100%}
+  .herometa h2{font-family:"Shippori Mincho",serif;font-size:20px;margin-bottom:6px}
+  .herometa p{color:var(--muted);font-size:13px;line-height:1.6}
+  .dock{display:flex;align-items:flex-end;gap:16px;background:#1a1813;border-radius:14px;padding:16px 18px;margin-top:16px}
+  .dock .s{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);font-size:10px}
+  .dock .sq{border-radius:22%;overflow:hidden;background:#f3ecdd}.dock svg{width:100%;height:100%;display:block}
+  .row{display:flex;gap:20px;flex-wrap:wrap}
+  .opt{display:flex;flex-direction:column;align-items:center;gap:9px}
+  .opt .sq{width:120px;height:120px;border-radius:27px;overflow:hidden;background:#f3ecdd;box-shadow:0 12px 26px -10px rgba(0,0,0,.7)}
+  .opt svg{width:100%;height:100%}.opt .lbl{font-size:12px;color:var(--muted)}.opt .lbl b{color:var(--paper)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>柿 <span class="k">kaki</span> · final icon</h1>
+  <p class="sub"><b>#5, stem removed</b> — rounded-square persimmon, olive calyx seated on top, cream tile. If this is the one, say “ship it”. To fine-tune, pick a calyx size below (A/B/C) or ask for a tweak (olive shade, corner radius, calyx a hair lower).</p>
+
+  <div class="hero">
+    <div class="big" id="hero"></div>
+    <div class="herometa">
+      <h2>Persimmon · olive calyx · cream</h2>
+      <p>#e0633a body · #6f7330 calyx · no stem. Rounded-square body (r18), calyx seated.</p>
+      <div class="dock" id="dock"></div>
+    </div>
+  </div>
+
+  <div class="row" id="opts"></div>
+</div>
+<script>
+const KAKI="#e0633a",OLIVE="#6f7330";
+const S=(i)=>`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${i}</svg>`;
+const CAL="M50 27 C46 27 44 30 43 34 C39 32 35 33 34 37 C38 39 43 38 46 36 C47 40 48 42 50 42 C52 42 53 40 54 36 C57 38 62 39 66 37 C65 33 61 32 57 34 C56 30 54 27 50 27 Z";
+// calyx only (NO stem), scaled about (50,37), centre moved to (50,cy)
+function crown(cy,s){const t=`translate(0 ${cy-37}) translate(50 37) scale(${s}) translate(-50 -37)`;
+  return `<g transform="${t}"><path d="${CAL}" fill="${OLIVE}"/></g>`;}
+function rsq(r,by,cy,s){const w=56,x=(100-w)/2,h=40;
+  return S(`<rect x="${x}" y="${by}" width="${w}" height="${h}" rx="${r}" fill="${KAKI}"/>${crown(cy,s)}`);}
+
+// the chosen #5 (no stem): r18, by40, cy44, s0.85
+const HERO = rsq(18,40,44,0.85);
+document.getElementById('hero').innerHTML = HERO;
+document.getElementById('dock').innerHTML = [64,32,16].map(px=>
+  `<div class="s"><div class="sq" style="width:${px}px;height:${px}px">${HERO}</div>${px}px</div>`).join("");
+
+const opts=[["A · smaller calyx",rsq(18,40,44,0.78)],["B · #5 (recommended)",rsq(18,40,44,0.85)],["C · larger calyx",rsq(18,40,44,0.93)]];
+document.getElementById('opts').innerHTML = opts.map(([l,svg])=>
+  `<div class="opt"><div class="sq">${svg}</div><div class="lbl"><b>${l.split(' ')[0]}</b> ${l.slice(l.indexOf(' '))}</div></div>`).join("");
+</script>
+</body>
+</html>

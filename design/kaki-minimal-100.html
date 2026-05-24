@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaki · 100 minimalist persimmon marks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--kaki:#e0633a;--kaki-bright:#f0703f;--paper:#efe9dd;--muted:#8a8273}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Zen Kaku Gothic New",sans-serif;
+    background:radial-gradient(130% 100% at 20% 0%,#26231c,#131210 60%,#0c0b08);color:var(--paper);min-height:100vh;padding:38px 30px 116px}
+  header{max-width:1280px;margin:0 auto 22px}
+  h1{font-family:"Shippori Mincho",serif;font-weight:700;font-size:27px}
+  h1 .k{color:var(--kaki)}
+  .sub{color:var(--muted);margin-top:8px;font-size:13.5px;line-height:1.6;max-width:720px}
+  .sub b{color:var(--paper)}
+  .grid{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:20px 16px}
+  .sec{grid-column:1/-1;margin-top:18px;display:flex;align-items:center;gap:12px}
+  .sec h2{font-family:"Shippori Mincho",serif;font-weight:600;font-size:14px;white-space:nowrap}
+  .sec .line{height:1px;background:linear-gradient(90deg,rgba(224,99,58,.5),transparent);flex:1}
+  .tile{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;transition:transform .14s ease}
+  .tile:hover{transform:translateY(-3px)}
+  .ico{position:relative;width:92px;height:92px;border-radius:21px;overflow:hidden;
+    box-shadow:0 8px 18px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.1)}
+  .ico svg{position:absolute;inset:0;width:100%;height:100%}
+  .num{font-size:11px;color:var(--muted)}.num b{color:var(--paper);font-weight:600}
+  .tile.picked .ico{box-shadow:0 0 0 3px var(--kaki-bright),0 8px 18px -6px rgba(224,99,58,.5)}
+  .tile.picked .num b{color:var(--kaki-bright)}
+  .tick{position:absolute;top:5px;right:5px;width:17px;height:17px;border-radius:50%;background:var(--kaki-bright);color:#fff;
+    display:none;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+  .tile.picked .tick{display:flex}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(18,16,12,.88);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+    border-top:1px solid rgba(255,255,255,.1);padding:13px 22px;z-index:10}
+  .bar .inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:14px;font-size:13.5px}
+  .bar b{color:var(--kaki-bright)}.bar .hint{color:var(--muted);font-size:12px}
+  .bar button{margin-left:auto;background:var(--kaki);color:#fff;border:none;border-radius:9px;padding:7px 15px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1>柿 <span class="k">kaki</span> · 100 minimalist marks</h1>
+  <p class="sub">Notion-esque, clean, minimal — each still a persimmon via the calyx top. <b>10 styles × 10 colour schemes.</b> Click favourites; numbers collect below, then tell me which.</p>
+</header>
+<div class="grid" id="grid"></div>
+<div class="bar"><div class="inner">
+  <span>Picked: <b id="picks">none yet</b></span><span class="hint">click to toggle</span>
+  <button onclick="copyPicks()">Copy numbers</button>
+</div></div>
+<script>
+const S=(i)=>`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${i}</svg>`;
+// minimal geometry
+const BODY="M50 40 C69 40 79 49 79 59 C79 70 66 78 50 78 C34 78 21 70 21 59 C21 49 31 40 50 40 Z";
+const CAL ="M50 27 C46 27 44 30 43 34 C39 32 35 33 34 37 C38 39 43 38 46 36 C47 40 48 42 50 42 C52 42 53 40 54 36 C57 38 62 39 66 37 C65 33 61 32 57 34 C56 30 54 27 50 27 Z";
+const STEM=(c,line)=> line?`<path d="M50 21 L50 27" stroke="${c}" stroke-width="4" stroke-linecap="round"/>`
+                          :`<rect x="48" y="20" width="4" height="8" rx="2" fill="${c}"/>`;
+const LEAF="M50 56 C45 47 45 37 50 33 C55 37 55 47 50 56 Z";
+const SW=5;
+
+// ---- 10 minimalist styles: fn(main, acc) ----
+const styles=[
+ ["Monoline side", (m,a)=>S(`${STEM(a,true)}
+    <path d="${BODY}" fill="none" stroke="${m}" stroke-width="${SW}" stroke-linejoin="round"/>
+    <path d="${CAL}" fill="none" stroke="${a}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`)],
+ ["Flat side", (m,a)=>S(`${STEM(a)}<path d="${BODY}" fill="${m}"/><path d="${CAL}" fill="${a}"/>`)],
+ ["Outline + filled calyx", (m,a)=>S(`${STEM(a)}
+    <path d="${BODY}" fill="none" stroke="${m}" stroke-width="${SW}" stroke-linejoin="round"/>
+    <path d="${CAL}" fill="${a}"/>`)],
+ ["Circle body + calyx", (m,a)=>S(`<circle cx="50" cy="55" r="25" fill="${m}"/>${STEM(a)}<path d="${CAL}" fill="${a}"/>`)],
+ ["Top-down star (flat)", (m,a)=>S(`<circle cx="50" cy="54" r="26" fill="${m}"/>
+    <g fill="${a}"><path d="${LEAF}"/><path d="${LEAF}" transform="rotate(90 50 54)"/><path d="${LEAF}" transform="rotate(180 50 54)"/><path d="${LEAF}" transform="rotate(270 50 54)"/>
+    <circle cx="50" cy="54" r="3" fill="${m}"/></g>`)],
+ ["Top-down star (line)", (m,a)=>S(`<circle cx="50" cy="54" r="26" fill="none" stroke="${m}" stroke-width="${SW}"/>
+    <g fill="none" stroke="${a}" stroke-width="3.4" stroke-linejoin="round"><path d="${LEAF}"/><path d="${LEAF}" transform="rotate(90 50 54)"/><path d="${LEAF}" transform="rotate(180 50 54)"/><path d="${LEAF}" transform="rotate(270 50 54)"/></g>`)],
+ ["Rounded-square body", (m,a)=>S(`<rect x="24" y="38" width="52" height="42" rx="19" fill="${m}"/>${STEM(a)}<path d="${CAL}" fill="${a}"/>`)],
+ ["Crown of leaves", (m,a)=>S(`<circle cx="50" cy="56" r="24" fill="${m}"/>
+    <g fill="${a}"><path d="M50 32 L44 18 L50 24 L56 18 Z"/><path d="M38 35 L28 26 L38 31 L43 26 Z"/><path d="M62 35 L72 26 L62 31 L57 26 Z"/></g>`)],
+ ["Single leaf", (m,a)=>S(`<circle cx="50" cy="56" r="24" fill="${m}"/>${STEM(a)}
+    <path d="M53 33 C62 26 73 28 75 30 C72 41 61 43 55 38 C53 36 52 34 53 33 Z" fill="${a}"/>`)],
+ ["Ultra-min (dot + sprout)", (m,a)=>S(`<circle cx="50" cy="57" r="22" fill="${m}"/>
+    <path d="M50 35 C50 28 47 23 44 20" fill="none" stroke="${a}" stroke-width="4" stroke-linecap="round"/>
+    <path d="M50 35 C50 29 53 25 57 23" fill="none" stroke="${a}" stroke-width="4" stroke-linecap="round"/>`)],
+];
+
+// ---- 10 colour schemes: {main, acc, bg, label} ----
+const KAKI="#e0633a",INK="#211d17",CHARC="#3a352c",CREAMFG="#f2ece0",OLIVE="#6f7330";
+const SUMI="linear-gradient(150deg,#242017,#100e0a)";
+const schemes=[
+ {m:INK,a:INK,bg:"#f3ecdd",l:"ink·cream"},
+ {m:CREAMFG,a:CREAMFG,bg:SUMI,l:"white·sumi"},
+ {m:KAKI,a:KAKI,bg:"#f3ecdd",l:"persimmon·cream"},
+ {m:KAKI,a:KAKI,bg:SUMI,l:"persimmon·sumi"},
+ {m:INK,a:KAKI,bg:"#f3ecdd",l:"ink+persimmon calyx"},
+ {m:KAKI,a:OLIVE,bg:"#f3ecdd",l:"persimmon+olive"},
+ {m:INK,a:INK,bg:"#ffffff",l:"ink·white"},
+ {m:CREAMFG,a:KAKI,bg:SUMI,l:"white+persimmon calyx"},
+ {m:CHARC,a:KAKI,bg:"#f3ecdd",l:"charcoal+persimmon"},
+ {m:KAKI,a:INK,bg:"#f3ecdd",l:"persimmon+ink calyx"},
+];
+
+// ---- render: 10 sections (one per style) x 10 schemes ----
+const grid=document.getElementById('grid');let n=0;const picks=new Set();
+styles.forEach(([name,fn])=>{
+  const h=document.createElement('div');h.className='sec';h.innerHTML=`<h2>${name}</h2><div class="line"></div>`;grid.appendChild(h);
+  schemes.forEach(s=>{
+    n++;const num=n;const svg=fn(s.m,s.a);
+    const t=document.createElement('div');t.className='tile';
+    t.innerHTML=`<div class="ico" style="background:${s.bg}">${svg}<div class="tick">✓</div></div><div class="num">#<b>${num}</b></div>`;
+    t.title=`${name} · ${s.l}`;
+    t.addEventListener('click',()=>{t.classList.toggle('picked');if(t.classList.contains('picked'))picks.add(num);else picks.delete(num);render();});
+    grid.appendChild(t);
+  });
+});
+function render(){const a=[...picks].sort((x,y)=>x-y);document.getElementById('picks').textContent=a.length?a.map(x=>'#'+x).join(', '):'none yet';}
+function copyPicks(){const a=[...picks].sort((x,y)=>x-y).map(x=>'#'+x).join(', ');navigator.clipboard.writeText(a||'').then(()=>{});}
+</script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaki · Dock icon concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700;800&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --kaki:#e0633a; --kaki-bright:#f0703f;
+    --ink:#16140f; --paper:#efe9dd; --muted:#8a8273;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Zen Kaku Gothic New",sans-serif;
+    background:radial-gradient(130% 100% at 20% 0%, #26231c, #131210 60%, #0c0b08);
+    color:var(--paper); min-height:100vh; padding:40px 32px 120px;
+  }
+  header{max-width:1200px;margin:0 auto 28px}
+  h1{font-family:"Shippori Mincho",serif;font-weight:700;font-size:30px;letter-spacing:.01em}
+  h1 .k{color:var(--kaki)}
+  .sub{color:var(--muted);margin-top:8px;font-size:14px;line-height:1.6;max-width:680px}
+  .sub b{color:var(--paper)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .legend span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+    border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 12px}
+
+  .grid{max-width:1200px;margin:0 auto;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:26px 22px}
+  .sec{grid-column:1/-1;margin-top:24px;display:flex;align-items:center;gap:14px}
+  .sec h2{font-family:"Shippori Mincho",serif;font-weight:600;font-size:16px;color:var(--paper);white-space:nowrap}
+  .sec .line{height:1px;background:linear-gradient(90deg,rgba(224,99,58,.5),transparent);flex:1}
+
+  .tile{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;
+    transition:transform .18s cubic-bezier(.2,.9,.25,1)}
+  .tile:hover{transform:translateY(-4px)}
+  .ico{
+    position:relative;width:118px;height:118px;border-radius:27px;overflow:hidden;
+    box-shadow:0 14px 30px -10px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  .ico svg{position:absolute;inset:0;width:100%;height:100%}
+  .ico .glass-hi{position:absolute;inset:0;background:
+     linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 42%);pointer-events:none}
+  .num{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .num b{color:var(--paper);font-weight:600}
+  .tile.picked .ico{box-shadow:0 0 0 3px var(--kaki-bright), 0 14px 30px -8px rgba(224,99,58,.5)}
+  .tile.picked .num b{color:var(--kaki-bright)}
+  .tick{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;
+    background:var(--kaki-bright);color:#fff;display:none;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .tile.picked .tick{display:flex}
+
+  /* sticky picks bar */
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(18,16,12,.86);
+    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+    border-top:1px solid rgba(255,255,255,.1);padding:14px 24px;z-index:10}
+  .bar .inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:16px;font-size:14px}
+  .bar b{color:var(--kaki-bright)}
+  .bar .hint{color:var(--muted);font-size:12px}
+  .bar button{margin-left:auto;background:var(--kaki);color:#fff;border:none;border-radius:9px;
+    padding:8px 16px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .bar button:hover{background:var(--kaki-bright)}
+</style>
+</head>
+<body>
+<header>
+  <h1>柿 <span class="k">kaki</span> · Dock icon concepts</h1>
+  <p class="sub"><b>Click any icons you like</b> — they’ll be highlighted and their numbers collected at the bottom. Then just tell me the numbers (e.g. “3, 17, 41”) and we’ll refine from there. All concepts stay in the Sumi &amp; Persimmon palette.</p>
+  <div class="legend">
+    <span>柿 Kanji</span><span>Persimmon fruit</span><span>Ink &amp; brush</span><span>Letter &amp; abstract</span><span>Glass</span>
+  </div>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<div class="bar"><div class="inner">
+  <span>Picked: <b id="picks">none yet</b></span>
+  <span class="hint">click an icon to toggle</span>
+  <button onclick="copyPicks()">Copy numbers</button>
+</div></div>
+
+<script>
+const KAKI="#e0633a", KAKI_B="#f0703f", INK="#16140f", PAPER="#efe9dd", GOLD="#e0a23a", GREEN="#4f7a3a";
+
+// ---------- backgrounds (return CSS background for the squircle) ----------
+const BG = {
+  sumi:  "linear-gradient(150deg,#242017,#100e0a)",
+  persimmon:"linear-gradient(150deg,#f07a45,#c8492a)",
+  washi: "linear-gradient(150deg,#f6efe0,#e7dcc4)",
+  ink:   "#14110d",
+  gold:  "linear-gradient(150deg,#f2a23a,#d2502a)",
+  glow:  "radial-gradient(120% 100% at 78% 22%, rgba(224,99,58,.55), #16140f 60%)",
+  glass: "linear-gradient(150deg, rgba(70,64,54,.55), rgba(26,24,18,.78))",
+  glassP:"linear-gradient(150deg, rgba(240,122,69,.6), rgba(150,60,38,.5))",
+};
+
+// ---------- motif builders (return inner SVG markup, viewBox 0 0 100 100) ----------
+const S = (inner)=>`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+
+function kanji(fg, {size=64, outline=false, dy=0}={}){
+  const stroke = outline ? `fill="none" stroke="${fg}" stroke-width="2.2"` : `fill="${fg}"`;
+  return S(`<text x="50" y="${52+dy}" text-anchor="middle" dominant-baseline="central"
+     font-family="'Shippori Mincho',serif" font-weight="700" font-size="${size}" ${stroke}>柿</text>`);
+}
+function letter(ch, fg, {size=62, font="'Zen Kaku Gothic New',sans-serif", weight=900}={}){
+  return S(`<text x="50" y="53" text-anchor="middle" dominant-baseline="central"
+     font-family="${font}" font-weight="${weight}" font-size="${size}" fill="${fg}">${ch}</text>`);
+}
+function shade(hex, amt){ // amt>0 toward white, <0 toward black
+  const c=hex.replace('#',''); const f=c.length===3?c.split('').map(x=>x+x).join(''):c;
+  let r=parseInt(f.substr(0,2),16),g=parseInt(f.substr(2,2),16),b=parseInt(f.substr(4,2),16);
+  const t=amt<0?0:255,p=Math.abs(amt);
+  r=Math.round((t-r)*p+r); g=Math.round((t-g)*p+g); b=Math.round((t-b)*p+b);
+  return `rgb(${r},${g},${b})`;
+}
+// Accurate Fuyu persimmon: oblate body (wider than tall), two-tone depth, broad
+// 4-lobed flat calyx over the top, short stem.
+const CALYX="#6f7330";
+function fruit(body, {style="flat", calyx=CALYX}={}){
+  // oblate body — flattened top & bottom, wider than tall
+  const bodyPath="M50 36 C72 36 84 46 84 58 C84 72 69 81 50 81 C31 81 16 72 16 58 C16 46 28 36 50 36 Z";
+  // broad 4-lobed calyx splaying flat over the shoulders
+  const calyxPath="M50 23 C45 23 42 27 40 32 C34 29 27 31 25 38 C32 41 39 40 45 37 C46 43 48 47 50 47 C52 47 54 43 55 37 C61 40 68 41 75 38 C73 31 66 29 60 32 C58 27 55 23 50 23 Z";
+  const stem=`<rect x="48" y="17" width="4" height="8" rx="2" fill="#7a5a30"/>`;
+  if(style==="line"){
+    return S(`<rect x="48" y="17" width="4" height="8" rx="2" fill="none" stroke="${body}" stroke-width="2"/>
+      <path d="${bodyPath}" fill="none" stroke="${body}" stroke-width="3.4"/>
+      <path d="${calyxPath}" fill="none" stroke="${body}" stroke-width="2.6" stroke-linejoin="round"/>`);
+  }
+  if(style==="silhouette"){
+    return S(`<path d="${bodyPath}" fill="${body}"/><path d="${calyxPath}" fill="${body}"/>
+      <rect x="48" y="17" width="4" height="8" rx="2" fill="${body}"/>`);
+  }
+  const darker=shade(body,-0.18), lighter=shade(body,0.12);
+  const gloss=style==="glossy"?`<ellipse cx="40" cy="50" rx="11" ry="7" fill="rgba(255,255,255,.42)"/>`:"";
+  // base (deeper), upper highlight body, faint lobe lines, calyx on top
+  return S(`${stem}
+    <path d="${bodyPath}" fill="${darker}"/>
+    <path d="M50 39 C69 39 79 47 79 57 C79 67 66 73 50 73 C34 73 21 67 21 57 C21 47 31 39 50 39 Z" fill="${body}"/>
+    <g stroke="${darker}" stroke-width="1.6" fill="none" opacity=".5" stroke-linecap="round">
+      <path d="M37 41 C33 53 33 66 39 77"/><path d="M63 41 C67 53 67 66 61 77"/></g>
+    ${gloss}
+    <path d="${calyxPath}" fill="${calyx}"/>
+    <path d="${calyxPath}" fill="none" stroke="${shade(calyx,-0.2)}" stroke-width="0.8" opacity=".6"/>`);
+}
+function enso(fg, {sw=8}={}){ // brush ring with a gap
+  return S(`<circle cx="50" cy="50" r="33" fill="none" stroke="${fg}" stroke-width="${sw}"
+     stroke-linecap="round" stroke-dasharray="178 40" transform="rotate(35 50 50)"/>`);
+}
+function stroke(fg){ // tapered brush swoosh (filled)
+  return S(`<path d="M22 62 C34 44, 62 44, 80 56 C64 52, 40 54, 26 66 Z" fill="${fg}"/>`);
+}
+function drop(fg, {cx=50, cy=52, s=1}={}){
+  return S(`<path transform="translate(${cx-50},${cy-50}) scale(${s})" transform-origin="50 50"
+     d="M50 24 C58 40, 70 50, 70 60 a20 20 0 1 1 -40 0 C30 50, 42 40, 50 24 Z" fill="${fg}"/>`);
+}
+function dot(fg){ // calligraphic comma 、
+  return S(`<text x="50" y="46" text-anchor="middle" dominant-baseline="central"
+     font-family="'Shippori Mincho',serif" font-weight="800" font-size="92" fill="${fg}">、</text>`);
+}
+function nib(fg){
+  return S(`<g fill="${fg}"><path d="M50 22 L66 64 L50 78 L34 64 Z"/></g>
+     <path d="M50 50 L50 78" stroke="#16140f" stroke-width="3"/>
+     <circle cx="50" cy="50" r="4" fill="#16140f"/>`);
+}
+function disc(fg, {r=24}={}){ return S(`<circle cx="50" cy="50" r="${r}" fill="${fg}"/>`); }
+function rings(fg){ return S(`<g fill="none" stroke="${fg}" stroke-width="4">
+   <circle cx="50" cy="50" r="12"/><circle cx="50" cy="50" r="24"/><circle cx="50" cy="50" r="35" opacity=".5"/></g>`); }
+function hanko(){ // red seal square with white 柿
+  return S(`<rect x="22" y="22" width="56" height="56" rx="9" fill="${KAKI}"/>
+   <text x="50" y="52" text-anchor="middle" dominant-baseline="central"
+     font-family="'Shippori Mincho',serif" font-weight="800" font-size="40" fill="#fff">柿</text>`);
+}
+function kanjiStroke(fg, line){ return S(
+   `<text x="50" y="44" text-anchor="middle" dominant-baseline="central"
+     font-family="'Shippori Mincho',serif" font-weight="700" font-size="52" fill="${fg}">柿</text>
+    <path d="M30 74 C42 68, 58 68, 70 74" stroke="${line}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`); }
+function kanjiSplit(){ return S(
+   `<defs><clipPath id="lft"><rect x="0" y="0" width="50" height="100"/></clipPath>
+    <clipPath id="rgt"><rect x="50" y="0" width="50" height="100"/></clipPath></defs>
+    <text x="50" y="52" text-anchor="middle" dominant-baseline="central" clip-path="url(#lft)"
+      font-family="'Shippori Mincho',serif" font-weight="700" font-size="64" fill="${KAKI}">柿</text>
+    <text x="50" y="52" text-anchor="middle" dominant-baseline="central" clip-path="url(#rgt)"
+      font-family="'Shippori Mincho',serif" font-weight="700" font-size="64" fill="${PAPER}">柿</text>`); }
+function kInCircle(fg, ring){ return S(`<circle cx="50" cy="50" r="34" fill="none" stroke="${ring}" stroke-width="3"/>
+   <text x="50" y="54" text-anchor="middle" dominant-baseline="central"
+     font-family="'Zen Kaku Gothic New',sans-serif" font-weight="900" font-size="46" fill="${fg}">k</text>`); }
+function discStroke(disc_, line){ return S(`<circle cx="50" cy="52" r="26" fill="${disc_}"/>
+   <path d="M26 40 C44 30, 60 34, 76 28" stroke="${line}" stroke-width="4" fill="none" stroke-linecap="round"/>`); }
+function threeDrops(fg){ return S(`<g fill="${fg}">
+   <circle cx="34" cy="40" r="9"/><circle cx="52" cy="54" r="7"/><circle cx="66" cy="66" r="5"/></g>`); }
+
+// ---------- the 50 curated concepts ----------
+const C = [
+ // -- 柿 Kanji --
+ ["柿 Kanji", null],
+ [BG.sumi, kanji(KAKI), "Persimmon 柿 on sumi"],
+ [BG.persimmon, kanji("#fff"), "White 柿 on persimmon"],
+ [BG.washi, kanji(INK), "Sumi 柿 on washi"],
+ [BG.ink, kanji(GOLD), "Gold 柿 on ink"],
+ [BG.sumi, kanji(KAKI,{outline:true}), "Outlined 柿"],
+ [BG.gold, kanji("#fff7ef"), "Cream 柿 on gold-persimmon"],
+ [BG.sumi, kanjiStroke(PAPER,KAKI), "柿 + persimmon underline"],
+ [BG.washi, (function(){return enso(INK).replace('</svg>', `<text x="50" y="52" text-anchor="middle" dominant-baseline="central" font-family="'Shippori Mincho',serif" font-weight="700" font-size="40" fill="${INK}">柿</text></svg>`)})(), "柿 in sumi ensō"],
+ [BG.persimmon, kanji("#fff",{size:86}), "Oversized 柿, bleeding"],
+ [BG.sumi, kanjiSplit(), "Split persimmon / paper 柿"],
+ [BG.washi, hanko(), "Hanko seal 柿"],
+ [BG.glow, kanji("#fff"), "White 柿 on persimmon glow"],
+
+ // -- Persimmon fruit --
+ ["Persimmon fruit", null],
+ [BG.sumi, fruit(KAKI), "Flat persimmon on sumi"],
+ [BG.washi, fruit(KAKI), "Flat persimmon on washi"],
+ [BG.ink, fruit(KAKI,{style:"glossy"}), "Glossy persimmon"],
+ [BG.sumi, fruit(KAKI,{style:"line"}), "Line-art persimmon"],
+ [BG.washi, fruit(INK,{style:"silhouette"}), "Sumi silhouette persimmon"],
+ [BG.persimmon, fruit("#fff",{style:"silhouette"}), "White persimmon on persimmon"],
+ [BG.sumi, fruit(KAKI,{scale:.92}), "Persimmon, calyx forward"],
+ [BG.gold, fruit("#fff",{style:"silhouette"}), "White fruit on gold"],
+ [BG.glow, fruit("#fff",{style:"silhouette"}), "Fruit on glow"],
+ [BG.washi, fruit(KAKI,{style:"glossy"}), "Glossy on washi"],
+ [BG.ink, (function(){return fruit(KAKI).replace('</svg>', dot(GOLD).replace(/<svg[^>]*>|<\/svg>/g,'')+'</svg>')})(), "Persimmon + ink mark"],
+ [BG.sumi, (function(){return fruit(KAKI,{scale:.8}).replace('</svg>', `<text x="74" y="30" font-family="'Shippori Mincho',serif" font-size="20" fill="${PAPER}">柿</text></svg>`)})(), "Fruit + corner 柿"],
+
+ // -- Ink & brush --
+ ["Ink &amp; brush", null],
+ [BG.sumi, enso(KAKI), "Persimmon ensō"],
+ [BG.persimmon, enso("#fff"), "White ensō on persimmon"],
+ [BG.washi, enso(INK), "Sumi ensō on washi"],
+ [BG.sumi, stroke(KAKI), "Persimmon brush stroke"],
+ [BG.washi, drop(KAKI), "Persimmon ink drop"],
+ [BG.washi, dot(INK), "Calligraphic 、 mark"],
+ [BG.ink, nib(GOLD), "Gold pen nib"],
+ [BG.persimmon, nib("#fff"), "White nib on persimmon"],
+ [BG.sumi, threeDrops(KAKI), "Descending ink drops"],
+ [BG.washi, (function(){return stroke(KAKI).replace('</svg>', drop(INK,{cx:78,cy:34,s:.5}).replace(/<svg[^>]*>|<\/svg>/g,'')+'</svg>')})(), "Stroke + drop"],
+
+ // -- Letter & abstract --
+ ["Letter &amp; abstract", null],
+ [BG.sumi, letter("k",KAKI), "k — persimmon on sumi"],
+ [BG.persimmon, letter("k","#fff"), "k — white on persimmon"],
+ [BG.sumi, kInCircle(KAKI,KAKI), "k in ring"],
+ [BG.washi, letter("K",INK,{font:"'Shippori Mincho',serif",weight:700}), "Serif K on washi"],
+ [BG.sumi, discStroke(KAKI,PAPER), "Persimmon disc + stroke"],
+ [BG.sumi, disc(KAKI,{r:22}), "Pure persimmon dot"],
+ [BG.persimmon, disc(INK,{r:22}), "Sumi dot on persimmon"],
+ [BG.washi, rings(KAKI), "Concentric persimmon rings"],
+
+ // -- Glass --
+ ["Glass (Liquid-glass style)", null],
+ [BG.glass, kanji("#fff"), "Glass + white 柿", true],
+ [BG.glass, fruit(KAKI,{style:"glossy"}), "Glass + glossy persimmon", true],
+ [BG.glass, disc(KAKI,{r:20}), "Glass + persimmon dot", true],
+ [BG.glassP, kanji("#fff"), "Frosted persimmon + 柿", true],
+ [BG.glass, enso(KAKI), "Glass + ensō", true],
+ [BG.glass, drop(KAKI_B,{s:1.05}), "Dark glass + glowing drop", true],
+ [BG.glassP, fruit("#fff",{style:"silhouette"}), "Liquid persimmon + fruit", true],
+ [BG.glass, letter("k","#fff"), "Glass + k", true],
+];
+
+// ---------- render ----------
+const grid = document.getElementById('grid');
+let n = 0;
+const picks = new Set();
+C.forEach(entry=>{
+  if(entry[1]===null){ // section header
+    const h = document.createElement('div'); h.className='sec';
+    h.innerHTML = `<h2>${entry[0]}</h2><div class="line"></div>`;
+    grid.appendChild(h); return;
+  }
+  n++;
+  const [bg, svg, label, glass] = entry;
+  const num = n;
+  const tile = document.createElement('div'); tile.className='tile'; tile.dataset.n=num;
+  tile.innerHTML = `<div class="ico" style="background:${bg}">${svg}${glass?'<div class="glass-hi"></div>':''}<div class="tick">✓</div></div>
+    <div class="num">#<b>${num}</b> · ${label}</div>`;
+  tile.addEventListener('click',()=>{
+    tile.classList.toggle('picked');
+    if(tile.classList.contains('picked')) picks.add(num); else picks.delete(num);
+    render();
+  });
+  grid.appendChild(tile);
+});
+function render(){
+  const arr=[...picks].sort((a,b)=>a-b);
+  document.getElementById('picks').textContent = arr.length? arr.map(x=>'#'+x).join(', ') : 'none yet';
+}
+function copyPicks(){
+  const arr=[...picks].sort((a,b)=>a-b).map(x=>'#'+x).join(', ');
+  navigator.clipboard.writeText(arr||'').then(()=>{});
+}
+</script>
+</body>
+</html>
