@@ -55,7 +55,7 @@ static NSTextField *gKanji = nil;
 static NSMutableArray *gSwatches = nil;
 
 @interface KakiSwatch : NSView
-@property (nonatomic) NSColor *fill;
+@property (nonatomic, retain) NSColor *fill;
 @property (nonatomic) BOOL selected;
 @property (nonatomic) BOOL isAdd;      // the "+" custom-picker cell
 @property (nonatomic, copy) void (^onPick)(NSColor *);
@@ -79,7 +79,11 @@ static NSMutableArray *gSwatches = nil;
     }
     [self.fill set];
     [circle fill];
-    [[NSColor colorWithCalibratedWhite:(self.fill == NSColor.whiteColor ? 0.6 : 0.0) alpha:0.35] set];
+    CGFloat rr=0, gg=0, bb=0, aa=0;
+    [[self.fill colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]]
+        getRed:&rr green:&gg blue:&bb alpha:&aa];
+    BOOL isWhite = (rr > 0.99 && gg > 0.99 && bb > 0.99);
+    [[NSColor colorWithCalibratedWhite:(isWhite ? 0.6 : 0.0) alpha:0.35] set];
     [circle setLineWidth:1.0];
     [circle stroke];
     if (self.selected) {
