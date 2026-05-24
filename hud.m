@@ -1,4 +1,5 @@
 #import <Cocoa/Cocoa.h>
+#import <QuartzCore/QuartzCore.h>
 #import "hud.h"
 #import "app_bridge.h"
 #include "_cgo_export.h" // go* functions
@@ -111,6 +112,87 @@ static NSTextField *gColorPanelKanji = nil;
 @end
 static KakiColorObserver *gColorObserver = nil;
 
+static NSMutableArray *gWidthPills = nil;
+
+@interface KakiWidthPill : NSView
+@property (nonatomic) CGFloat lineW;     // visual bar thickness
+@property (nonatomic) CGFloat penW;      // value passed to goSetWidth
+@property (nonatomic) BOOL selected;
+@property (nonatomic, copy) void (^onPick)(void);
+@end
+@implementation KakiWidthPill
+- (void)drawRect:(NSRect)r {
+    NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:11 yRadius:11];
+    [(self.selected ? [KakiAccent() colorWithAlphaComponent:0.18]
+                    : [NSColor colorWithCalibratedWhite:1 alpha:0.035]) set];
+    [bg fill];
+    [(self.selected ? KakiAccent() : [NSColor colorWithCalibratedWhite:1 alpha:0.07]) set];
+    [bg setLineWidth:1.0]; [bg stroke];
+    NSRect bar = NSMakeRect(NSMidX(self.bounds)-9, NSMidY(self.bounds)-self.lineW/2, 18, self.lineW);
+    NSBezierPath *line = [NSBezierPath bezierPathWithRoundedRect:bar xRadius:self.lineW/2 yRadius:self.lineW/2];
+    [(self.selected ? KakiAccent() : [NSColor colorWithCalibratedWhite:0.94 alpha:1]) set];
+    [line fill];
+}
+- (void)mouseDown:(NSEvent *)e { if (self.onPick) self.onPick(); }
+@end
+
+@interface KakiButton : NSView
+@property (nonatomic, copy) NSString *title;
+@property (nonatomic) BOOL isDraw;       // the persimmon toggle button
+@property (nonatomic) BOOL on;           // draw on/off
+@property (nonatomic, copy) void (^onClick)(void);
+@end
+@implementation KakiButton
+- (void)drawRect:(NSRect)r {
+    NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:13 yRadius:13];
+    NSColor *fill, *border, *text;
+    if (self.isDraw && self.on) {
+        fill = KakiAccent(); border = [KakiAccent() colorWithAlphaComponent:1];
+        text = [NSColor whiteColor];
+    } else if (self.isDraw) {
+        fill = [KakiAccent() colorWithAlphaComponent:0.16];
+        border = [KakiAccent() colorWithAlphaComponent:0.4];
+        text = [NSColor colorWithCalibratedRed:0.96 green:0.82 blue:0.77 alpha:1];
+    } else {
+        fill = [NSColor colorWithCalibratedWhite:1 alpha:0.035];
+        border = [NSColor colorWithCalibratedWhite:1 alpha:0.07];
+        text = [NSColor colorWithCalibratedWhite:0.94 alpha:1];
+    }
+    [fill set]; [bg fill];
+    [border set]; [bg setLineWidth:1.0]; [bg stroke];
+    NSDictionary *attr = @{ NSForegroundColorAttributeName:text,
+        NSFontAttributeName:[NSFont systemFontOfSize:13 weight:NSFontWeightMedium] };
+    NSSize sz = [self.title sizeWithAttributes:attr];
+    [self.title drawAtPoint:NSMakePoint(NSMidX(self.bounds)-sz.width/2, NSMidY(self.bounds)-sz.height/2)
+              withAttributes:attr];
+}
+- (void)mouseDown:(NSEvent *)e { if (self.onClick) self.onClick(); }
+- (void)setOn:(BOOL)on {
+    _on = on;
+    if (self.isDraw) {
+        self.wantsLayer = YES;
+        if (on) {
+            CABasicAnimation *a = [CABasicAnimation animationWithKeyPath:@"shadowOpacity"];
+            a.fromValue = @0.25; a.toValue = @0.6; a.duration = 1.3;
+            a.autoreverses = YES; a.repeatCount = HUGE_VALF;
+            self.layer.shadowColor = KakiAccent().CGColor;
+            self.layer.shadowRadius = 10; self.layer.shadowOffset = CGSizeZero;
+            [self.layer addAnimation:a forKey:@"pulse"];
+        } else {
+            [self.layer removeAnimationForKey:@"pulse"];
+            self.layer.shadowOpacity = 0;
+        }
+    }
+    [self setNeedsDisplay:YES];
+}
+@end
+
+static KakiButton *gDrawButton = nil;
+
+void KakiHUDSetDrawState(int on) {
+    if (gDrawButton) gDrawButton.on = (on != 0);
+}
+
 NSPanel *KakiMakeHUD(void) {
     if (!gColorObserver) gColorObserver = [[KakiColorObserver alloc] init];
 
@@ -205,6 +287,50 @@ NSPanel *KakiMakeHUD(void) {
     ((KakiSwatch *)gSwatches[0]).selected = YES;
     applyColor(kPresetColors[0].r, kPresetColors[0].g, kPresetColors[0].b);
 
+    // --- Width pills (thin / medium / thick = 2 / 5 / 10) ---
+    gWidthPills = [NSMutableArray array];
+    CGFloat wy = 86, ww = 76, wgap = 6;
+    CGFloat widths[3] = {2, 5, 10};
+    CGFloat bars[3]   = {2, 4, 8};
+    for (int i = 0; i < 3; i++) {
+        NSRect fr = NSMakeRect(20 + i*(ww+wgap), wy, ww, 34);
+        KakiWidthPill *pill = [[KakiWidthPill alloc] initWithFrame:fr];
+        pill.lineW = bars[i]; pill.penW = widths[i];
+        pill.onPick = ^{
+            for (KakiWidthPill *p in gWidthPills) p.selected = NO;
+            pill.selected = YES;
+            for (KakiWidthPill *p in gWidthPills) [p setNeedsDisplay:YES];
+            goSetWidth(pill.penW);
+        };
+        [gWidthPills addObject:pill];
+        [bg addSubview:pill];
+    }
+
+    // --- Action buttons: Draw (toggle) / Undo / Clear ---
+    KakiButton *drawBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(20, 40, 110, 40)];
+    drawBtn.title = @"Draw"; drawBtn.isDraw = YES;
+    drawBtn.onClick = ^{
+        int on = goToggleMode();
+        ApplyDrawMode(on);
+        drawBtn.on = (on != 0);
+    };
+    [bg addSubview:drawBtn];
+    gDrawButton = drawBtn;
+
+    KakiButton *undoBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(136, 40, 52, 40)];
+    undoBtn.title = @"↶";
+    undoBtn.onClick = ^{ goUndo(); RedrawOverlay(); };
+    [bg addSubview:undoBtn];
+
+    KakiButton *clearBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(194, 40, 54, 40)];
+    clearBtn.title = @"✕";
+    clearBtn.onClick = ^{ goClear(); RedrawOverlay(); };
+    [bg addSubview:clearBtn];
+
+    // Default width selection: medium (index 1).
+    ((KakiWidthPill *)gWidthPills[1]).selected = YES;
+    goSetWidth(5);
+
     // Position near top-centre of the main screen.
     NSRect scr = [[NSScreen mainScreen] visibleFrame];
     NSPoint origin = NSMakePoint(NSMidX(scr) - frame.size.width/2,
@@ -213,5 +339,3 @@ NSPanel *KakiMakeHUD(void) {
     [panel orderFrontRegardless];
     return panel;
 }
-
-void KakiHUDSetDrawState(int on) { (void)on; /* wired in Task 5 */ }

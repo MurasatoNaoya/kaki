@@ -2,7 +2,7 @@ package main
 
 /*
 #cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Cocoa -framework Carbon
+#cgo LDFLAGS: -framework Cocoa -framework Carbon -framework QuartzCore
 #include <stdlib.h>
 #include "bridge.h"
 */
