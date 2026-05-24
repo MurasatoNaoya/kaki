@@ -53,3 +53,17 @@ func (s *Store) EndStroke() {
 	s.strokes = append(s.strokes, *s.current)
 	s.current = nil
 }
+
+// Undo removes the most recently committed stroke. No-op when empty.
+func (s *Store) Undo() {
+	if len(s.strokes) == 0 {
+		return
+	}
+	s.strokes = s.strokes[:len(s.strokes)-1]
+}
+
+// Clear removes all committed strokes. The in-progress stroke (if any) is left
+// untouched so an active drag is not interrupted mid-flight.
+func (s *Store) Clear() {
+	s.strokes = nil
+}
