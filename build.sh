@@ -15,7 +15,7 @@ echo "Assembling $APP ..."
 mkdir -p "$APP/Contents/MacOS" "$RES"
 cp kaki "$APP/Contents/MacOS/kaki"
 cp Info.plist "$APP/Contents/Info.plist"
-# Bundled wordmark font (added in a later task); copy if present.
+# Bundled wordmark font (subset, ~3.4KB); copy into Resources if present.
 if [ -f assets/fonts/ShipporiMincho-SemiBold.ttf ]; then
   cp assets/fonts/ShipporiMincho-SemiBold.ttf "$RES/"
 fi
