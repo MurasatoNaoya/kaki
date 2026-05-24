@@ -2,6 +2,8 @@
 #import <Carbon/Carbon.h>
 #import <CoreText/CoreText.h>
 #include "bridge.h"
+#import "hud.h"
+#import "app_bridge.h"
 #include "_cgo_export.h" // declares goBeginStroke, goAddPoint, ... goSnapshot, etc.
 
 // Globals so the hotkey handler and menu can reach the window/view.
@@ -97,11 +99,8 @@ static OSStatus hotKeyHandler(EventHandlerCallRef next, EventRef e, void *ud) {
 
     if (hk.id == HOTKEY_TOGGLE) {
         int on = goToggleMode();
-        // Drawing on => capture mouse; off => clicks pass through.
-        [gWindow setIgnoresMouseEvents:(on ? NO : YES)];
-        if (on) {
-            [gWindow makeKeyAndOrderFront:nil];
-        }
+        ApplyDrawMode(on);
+        KakiHUDSetDrawState(on);
     } else if (hk.id == HOTKEY_CLEAR) {
         goClear();
         [gCanvas setNeedsDisplay:YES];
@@ -188,6 +187,14 @@ static void registerBundledFont(void) {
     }
 }
 
+// ---- Draw-mode bridge (declared in app_bridge.h, called from hud.m) ----
+
+void ApplyDrawMode(int on) {
+    [gWindow setIgnoresMouseEvents:(on ? NO : YES)];
+    if (on) { [gWindow makeKeyAndOrderFront:nil]; }
+}
+void RedrawOverlay(void) { [gCanvas setNeedsDisplay:YES]; }
+
 // ---- Entry point ----
 
 void RunApp(void) {
@@ -219,6 +226,7 @@ void RunApp(void) {
         [gWindow orderFrontRegardless];
 
         buildAppMenu();
+        gHUD = KakiMakeHUD();
         registerHotKeys();
 
         [NSApp run];
