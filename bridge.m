@@ -123,7 +123,7 @@ static MenuController *gMenuController = nil;
 static void buildStatusItem(void) {
     gStatusItem = [[NSStatusBar systemStatusBar]
         statusItemWithLength:NSVariableStatusItemLength];
-    gStatusItem.button.title = @"✎";
+    gStatusItem.button.title = @"✎ Pen";
 
     gMenuController = [[MenuController alloc] init];
     NSMenu *menu = [[NSMenu alloc] init];
@@ -218,6 +218,7 @@ void RunApp(void) {
     @autoreleasepool {
         [NSApplication sharedApplication];
         // Accessory => menu-bar agent: no dock icon, does not steal focus.
+        // (Also set via LSUIElement in Info.plist; this is belt-and-suspenders.)
         [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
 
         NSRect frame = [[NSScreen mainScreen] frame];
