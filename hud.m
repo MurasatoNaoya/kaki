@@ -193,6 +193,13 @@ void KakiHUDSetDrawState(int on) {
     if (gDrawButton) gDrawButton.on = (on != 0);
 }
 
+@interface KakiHUDDelegate : NSObject <NSWindowDelegate>
+@end
+@implementation KakiHUDDelegate
+- (BOOL)windowShouldClose:(NSWindow *)w { [w orderOut:nil]; return NO; }
+@end
+static KakiHUDDelegate *gHUDDelegate = nil;
+
 NSPanel *KakiMakeHUD(void) {
     if (!gColorObserver) gColorObserver = [[KakiColorObserver alloc] init];
 
@@ -336,6 +343,8 @@ NSPanel *KakiMakeHUD(void) {
     NSPoint origin = NSMakePoint(NSMidX(scr) - frame.size.width/2,
                                  NSMaxY(scr) - frame.size.height - 40);
     [panel setFrameOrigin:origin];
+    if (!gHUDDelegate) gHUDDelegate = [[KakiHUDDelegate alloc] init];
+    [panel setDelegate:gHUDDelegate];
     [panel orderFrontRegardless];
     return panel;
 }
