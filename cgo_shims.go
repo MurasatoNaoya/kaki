@@ -60,7 +60,11 @@ func goSnapshot(outLen *C.int) *C.double {
 	snap := gStore.Snapshot()
 	n := len(snap)
 	buf := C.malloc(C.size_t(n) * C.size_t(unsafe.Sizeof(C.double(0))))
-	arr := (*[1 << 20]C.double)(buf)
+	if buf == nil {
+		*outLen = 0
+		return nil
+	}
+	arr := unsafe.Slice((*C.double)(buf), n)
 	for i, v := range snap {
 		arr[i] = C.double(v)
 	}
@@ -71,6 +75,7 @@ func goSnapshot(outLen *C.int) *C.double {
 //export goFreeSnapshot
 func goFreeSnapshot(p *C.double) { C.free(unsafe.Pointer(p)) }
 
+// snapshotForTest is not called in production; it exists because Go forbids import "C" in _test.go files.
 // snapshotForTest calls goSnapshot/goFreeSnapshot and returns a plain []float64.
 // This helper exists solely because Go does not allow import "C" in _test.go files;
 // the test calls this instead of goSnapshot directly.
@@ -79,7 +84,7 @@ func snapshotForTest() []float64 {
 	ptr := goSnapshot(&n)
 	defer goFreeSnapshot(ptr)
 	count := int(n)
-	arr := (*[1 << 20]C.double)(unsafe.Pointer(ptr))
+	arr := unsafe.Slice(ptr, count)
 	out := make([]float64, count)
 	for i := range out {
 		out[i] = float64(arr[i])
