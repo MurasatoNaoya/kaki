@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
+#import <CoreText/CoreText.h>
 #include "bridge.h"
 #include "_cgo_export.h" // declares goBeginStroke, goAddPoint, ... goSnapshot, etc.
 
@@ -172,6 +173,21 @@ static void buildAppMenu(void) {
     [NSApp setMainMenu:mainMenu];
 }
 
+// Registers the bundled Shippori Mincho font so the HUD wordmark can use it.
+// Safe to call once at launch; logs and continues on failure (system serif fallback).
+static void registerBundledFont(void) {
+    NSString *path = [[NSBundle mainBundle] pathForResource:@"ShipporiMincho-SemiBold"
+                                                     ofType:@"ttf"];
+    if (!path) { NSLog(@"kaki: bundled font not found; using system serif"); return; }
+    NSURL *url = [NSURL fileURLWithPath:path];
+    CFErrorRef err = NULL;
+    if (!CTFontManagerRegisterFontsForURL((__bridge CFURLRef)url,
+                                          kCTFontManagerScopeProcess, &err)) {
+        NSLog(@"kaki: font registration failed: %@", err);
+        if (err) CFRelease(err);
+    }
+}
+
 // ---- Entry point ----
 
 void RunApp(void) {
@@ -180,6 +196,7 @@ void RunApp(void) {
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular]; // Dock app
         gAppDelegate = [[KakiAppDelegate alloc] init];
         [NSApp setDelegate:gAppDelegate];
+        registerBundledFont();
 
         NSRect frame = [[NSScreen mainScreen] frame];
 
