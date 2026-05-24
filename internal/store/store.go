@@ -88,3 +88,27 @@ func (s *Store) ToggleMode() bool {
 	s.drawMode = !s.drawMode
 	return s.drawMode
 }
+
+// Snapshot serializes all strokes (committed plus any in-progress one) into a
+// flat slice for the renderer. Layout:
+//
+//	[ strokeCount,
+//	  per stroke: R, G, B, A, width, pointCount, x0,y0, x1,y1, ... ]
+//
+// This layout is the exact contract consumed by bridge.m; changing it requires
+// changing the Obj-C reader in lockstep.
+func (s *Store) Snapshot() []float64 {
+	all := s.strokes
+	if s.current != nil {
+		all = append(append([]Stroke(nil), s.strokes...), *s.current)
+	}
+
+	out := []float64{float64(len(all))}
+	for _, st := range all {
+		out = append(out, st.R, st.G, st.B, st.A, st.Width, float64(len(st.Points)))
+		for _, p := range st.Points {
+			out = append(out, p.X, p.Y)
+		}
+	}
+	return out
+}

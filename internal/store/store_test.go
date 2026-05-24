@@ -100,3 +100,46 @@ func TestToggleModeFlipsAndReturnsNewState(t *testing.T) {
 		t.Fatalf("second toggle should return false, got %v", got)
 	}
 }
+
+func TestSnapshotLayout(t *testing.T) {
+	s := New()
+	s.SetColor(0.1, 0.2, 0.3, 0.4)
+	s.SetWidth(5)
+	s.BeginStroke(10, 20)
+	s.AddPoint(30, 40)
+	s.EndStroke()
+
+	got := s.Snapshot()
+	want := []float64{
+		1,                    // stroke count
+		0.1, 0.2, 0.3, 0.4,   // RGBA
+		5,                    // width
+		2,                    // point count
+		10, 20, 30, 40,       // points
+	}
+	if len(got) != len(want) {
+		t.Fatalf("len mismatch: want %d got %d (%v)", len(want), len(got), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("at %d: want %v got %v (full %v)", i, want[i], got[i], got)
+		}
+	}
+}
+
+func TestSnapshotIncludesInProgressStroke(t *testing.T) {
+	s := New()
+	s.BeginStroke(1, 2) // not ended
+	got := s.Snapshot()
+	if got[0] != 1 {
+		t.Fatalf("in-progress stroke should be counted; got count %v (%v)", got[0], got)
+	}
+}
+
+func TestSnapshotEmpty(t *testing.T) {
+	s := New()
+	got := s.Snapshot()
+	if len(got) != 1 || got[0] != 0 {
+		t.Fatalf("empty snapshot should be [0], got %v", got)
+	}
+}
