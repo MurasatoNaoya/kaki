@@ -1,0 +1,4 @@
+/screenpen
+*.o
+*.a
+.DS_Store
