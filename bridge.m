@@ -133,3 +133,78 @@ static void buildStatusItem(void) {
 
     gStatusItem.menu = menu;
 }
+
+// ---- Global hotkeys (Carbon — no Accessibility permission needed) ----
+
+enum { HOTKEY_TOGGLE = 1, HOTKEY_CLEAR = 2 };
+
+static OSStatus hotKeyHandler(EventHandlerCallRef next, EventRef e, void *ud) {
+    (void)next; (void)ud;
+    EventHotKeyID hk;
+    GetEventParameter(e, kEventParamDirectObject, typeEventHotKeyID, NULL,
+                      sizeof(hk), NULL, &hk);
+
+    if (hk.id == HOTKEY_TOGGLE) {
+        int on = goToggleMode();
+        // Drawing on => capture mouse; off => clicks pass through.
+        [gWindow setIgnoresMouseEvents:(on ? NO : YES)];
+        if (on) {
+            [gWindow makeKeyAndOrderFront:nil];
+        }
+    } else if (hk.id == HOTKEY_CLEAR) {
+        goClear();
+        [gCanvas setNeedsDisplay:YES];
+    }
+    return noErr;
+}
+
+static void registerHotKeys(void) {
+    EventTypeSpec spec = { kEventClassKeyboard, kEventHotKeyPressed };
+    InstallApplicationEventHandler(&hotKeyHandler, 1, &spec, NULL, NULL);
+
+    EventHotKeyRef ref;
+    // ⌥⌘D toggle draw mode. kVK_ANSI_D == 2.
+    EventHotKeyID toggleID = { 'tgld', HOTKEY_TOGGLE };
+    RegisterEventHotKey(2, optionKey | cmdKey, toggleID,
+                        GetApplicationEventTarget(), 0, &ref);
+
+    // ⌥⌘C clear. kVK_ANSI_C == 8.
+    EventHotKeyID clearID = { 'tglc', HOTKEY_CLEAR };
+    RegisterEventHotKey(8, optionKey | cmdKey, clearID,
+                        GetApplicationEventTarget(), 0, &ref);
+}
+
+// ---- Entry point ----
+
+void RunApp(void) {
+    @autoreleasepool {
+        [NSApplication sharedApplication];
+        // Accessory => menu-bar agent: no dock icon, does not steal focus.
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+
+        NSRect frame = [[NSScreen mainScreen] frame];
+
+        gWindow = [[NSPanel alloc]
+            initWithContentRect:frame
+                      styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel
+                        backing:NSBackingStoreBuffered
+                          defer:NO];
+        [gWindow setOpaque:NO];
+        [gWindow setBackgroundColor:[NSColor clearColor]];
+        [gWindow setLevel:NSStatusWindowLevel + 1]; // float above normal windows
+        [gWindow setIgnoresMouseEvents:YES];         // start in pass-through (draw off)
+        [gWindow setHasShadow:NO];
+        [gWindow setCollectionBehavior:
+            NSWindowCollectionBehaviorCanJoinAllSpaces |
+            NSWindowCollectionBehaviorStationary];
+
+        gCanvas = [[CanvasView alloc] initWithFrame:frame];
+        [gWindow setContentView:gCanvas];
+        [gWindow orderFrontRegardless];
+
+        buildStatusItem();
+        registerHotKeys();
+
+        [NSApp run];
+    }
+}
