@@ -4,9 +4,9 @@
 #import "app_bridge.h"
 #include "_cgo_export.h" // go* functions
 
-// Persimmon UI accent (柿色).
+// Persimmon UI accent (柿色) — vivid sRGB so it reads true on a dark glass panel.
 static NSColor *KakiAccent(void) {
-    return [NSColor colorWithCalibratedRed:0.878 green:0.388 blue:0.227 alpha:1.0];
+    return [NSColor colorWithSRGBRed:0.945 green:0.435 blue:0.231 alpha:1.0];
 }
 
 // Wordmark font: bundled Shippori Mincho if available, else a system serif.
@@ -20,16 +20,32 @@ static NSFont *KakiWordmarkFont(CGFloat size) {
     return f;
 }
 
-// Drag-anywhere background view with a rounded, bordered fill over the vibrancy layer.
+// Glass backdrop: a light translucent sumi tint (lets the blur read through), a
+// specular highlight along the top edge, and a fine bright hairline — evoking glass.
+static const CGFloat kHUDRadius = 26.0;
+
 @interface KakiBackdrop : NSView
 @end
 @implementation KakiBackdrop
 - (void)drawRect:(NSRect)r {
     NSBezierPath *p = [NSBezierPath bezierPathWithRoundedRect:self.bounds
-                                                      xRadius:22 yRadius:22];
-    [[NSColor colorWithCalibratedWhite:0.11 alpha:0.55] set]; // sumi tint over vibrancy
+                                                      xRadius:kHUDRadius yRadius:kHUDRadius];
+    // Light sumi tint — low alpha so the vibrancy blur shows through (glassy, not flat).
+    [[NSColor colorWithSRGBRed:0.11 green:0.10 blue:0.09 alpha:0.28] set];
     [p fill];
-    [[NSColor colorWithCalibratedWhite:1.0 alpha:0.07] set];  // hairline edge
+
+    // Specular top highlight (light catching the top of the glass).
+    [NSGraphicsContext saveGraphicsState];
+    [p addClip];
+    NSGradient *spec = [[NSGradient alloc] initWithColorsAndLocations:
+        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.12], 0.0,
+        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.0],  0.45,
+        nil];
+    [spec drawInRect:self.bounds angle:270.0]; // bright at top, fading down
+    [NSGraphicsContext restoreGraphicsState];
+
+    // Bright hairline edge.
+    [[NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.16] set];
     [p setLineWidth:1.0];
     [p stroke];
 }
@@ -39,12 +55,13 @@ static NSFont *KakiWordmarkFont(CGFloat size) {
 @end
 
 typedef struct { CGFloat r, g, b; const char *name; } KakiColor;
+// Vivid sRGB presets (the pen ink uses these same components).
 static const KakiColor kPresetColors[] = {
-    {0.898, 0.282, 0.302, "red"},
-    {0.961, 0.510, 0.122, "orange"},
-    {0.949, 0.757, 0.180, "yellow"},
-    {0.184, 0.682, 0.369, "green"},
-    {0.184, 0.435, 0.929, "blue"},
+    {0.925, 0.262, 0.286, "red"},
+    {0.961, 0.549, 0.122, "orange"},
+    {0.969, 0.792, 0.180, "yellow"},
+    {0.196, 0.745, 0.408, "green"},
+    {0.200, 0.478, 0.969, "blue"},
     {0.000, 0.000, 0.000, "black"},
     {1.000, 1.000, 1.000, "white"},
 };
@@ -64,15 +81,15 @@ static NSMutableArray *gSwatches = nil;
 
 @implementation KakiSwatch
 - (void)drawRect:(NSRect)r {
-    NSRect c = NSInsetRect(self.bounds, 4, 4);
+    NSRect c = NSInsetRect(self.bounds, 5, 5);
     NSBezierPath *circle = [NSBezierPath bezierPathWithOvalInRect:c];
     if (self.isAdd) {
-        [[NSColor colorWithCalibratedWhite:0.5 alpha:1.0] set];
+        [[NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.32] set];
         [circle setLineWidth:1.5];
         CGFloat d[2] = {3,3}; [circle setLineDash:d count:2 phase:0];
         [circle stroke];
-        NSDictionary *attr = @{ NSForegroundColorAttributeName:[NSColor colorWithCalibratedWhite:0.72 alpha:1],
-                                NSFontAttributeName:[NSFont systemFontOfSize:15 weight:NSFontWeightThin] };
+        NSDictionary *attr = @{ NSForegroundColorAttributeName:[NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.6],
+                                NSFontAttributeName:[NSFont systemFontOfSize:17 weight:NSFontWeightThin] };
         NSString *plus = @"+";
         NSSize sz = [plus sizeWithAttributes:attr];
         [plus drawAtPoint:NSMakePoint(NSMidX(c)-sz.width/2, NSMidY(c)-sz.height/2) withAttributes:attr];
@@ -80,31 +97,42 @@ static NSMutableArray *gSwatches = nil;
     }
     [self.fill set];
     [circle fill];
+    // Subtle top sheen on each swatch for a glassy bead look.
+    [NSGraphicsContext saveGraphicsState];
+    [circle addClip];
+    NSGradient *sheen = [[NSGradient alloc] initWithColorsAndLocations:
+        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.22], 0.0,
+        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.0],  0.5, nil];
+    [sheen drawInRect:c angle:270.0];
+    [NSGraphicsContext restoreGraphicsState];
+
     CGFloat rr=0, gg=0, bb=0, aa=0;
-    [[self.fill colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]]
+    [[self.fill colorUsingColorSpace:[NSColorSpace sRGBColorSpace]]
         getRed:&rr green:&gg blue:&bb alpha:&aa];
     BOOL isWhite = (rr > 0.99 && gg > 0.99 && bb > 0.99);
-    [[NSColor colorWithCalibratedWhite:(isWhite ? 0.6 : 0.0) alpha:0.35] set];
+    [[NSColor colorWithSRGBRed:(isWhite?0.7:1) green:(isWhite?0.7:1) blue:(isWhite?0.7:1)
+                         alpha:(isWhite?0.5:0.12)] set];
     [circle setLineWidth:1.0];
     [circle stroke];
+
     if (self.selected) {
-        NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(self.bounds, 1, 1)];
+        NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(self.bounds, 1.25, 1.25)];
         [KakiAccent() set];
-        [ring setLineWidth:2.0];
+        [ring setLineWidth:2.5];
         [ring stroke];
     }
 }
 - (void)mouseDown:(NSEvent *)e { if (self.onPick) self.onPick(self.fill); }
 @end
 
-// --- Custom "+" colour-panel observer (Task 4 Step 3) ---
+// --- Custom "+" colour-panel observer ---
 static NSTextField *gColorPanelKanji = nil;
 
 @interface KakiColorObserver : NSObject
 @end
 @implementation KakiColorObserver
 - (void)kakiColorChanged:(NSColorPanel *)cp {
-    NSColor *c = [cp.color colorUsingColorSpace:[NSColorSpace deviceRGBColorSpace]];
+    NSColor *c = [cp.color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
     if (!c) return;
     goSetColor(c.redComponent, c.greenComponent, c.blueComponent, 1.0);
     if (gColorPanelKanji) gColorPanelKanji.textColor = c;
@@ -122,15 +150,15 @@ static NSMutableArray *gWidthPills = nil;
 @end
 @implementation KakiWidthPill
 - (void)drawRect:(NSRect)r {
-    NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:11 yRadius:11];
-    [(self.selected ? [KakiAccent() colorWithAlphaComponent:0.18]
-                    : [NSColor colorWithCalibratedWhite:1 alpha:0.035]) set];
+    NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:10 yRadius:10];
+    [(self.selected ? [KakiAccent() colorWithAlphaComponent:0.22]
+                    : [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.06]) set];
     [bg fill];
-    [(self.selected ? KakiAccent() : [NSColor colorWithCalibratedWhite:1 alpha:0.07]) set];
+    [(self.selected ? KakiAccent() : [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.12]) set];
     [bg setLineWidth:1.0]; [bg stroke];
     NSRect bar = NSMakeRect(NSMidX(self.bounds)-9, NSMidY(self.bounds)-self.lineW/2, 18, self.lineW);
     NSBezierPath *line = [NSBezierPath bezierPathWithRoundedRect:bar xRadius:self.lineW/2 yRadius:self.lineW/2];
-    [(self.selected ? KakiAccent() : [NSColor colorWithCalibratedWhite:0.94 alpha:1]) set];
+    [(self.selected ? KakiAccent() : [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.92]) set];
     [line fill];
 }
 - (void)mouseDown:(NSEvent *)e { if (self.onPick) self.onPick(); }
@@ -144,24 +172,33 @@ static NSMutableArray *gWidthPills = nil;
 @end
 @implementation KakiButton
 - (void)drawRect:(NSRect)r {
-    NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:13 yRadius:13];
+    NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:12 yRadius:12];
     NSColor *fill, *border, *text;
     if (self.isDraw && self.on) {
-        fill = KakiAccent(); border = [KakiAccent() colorWithAlphaComponent:1];
+        fill = KakiAccent(); border = KakiAccent();
         text = [NSColor whiteColor];
     } else if (self.isDraw) {
-        fill = [KakiAccent() colorWithAlphaComponent:0.16];
-        border = [KakiAccent() colorWithAlphaComponent:0.4];
-        text = [NSColor colorWithCalibratedRed:0.96 green:0.82 blue:0.77 alpha:1];
+        fill = [KakiAccent() colorWithAlphaComponent:0.22];
+        border = [KakiAccent() colorWithAlphaComponent:0.55];
+        text = [NSColor colorWithSRGBRed:0.99 green:0.78 blue:0.70 alpha:1];
     } else {
-        fill = [NSColor colorWithCalibratedWhite:1 alpha:0.035];
-        border = [NSColor colorWithCalibratedWhite:1 alpha:0.07];
-        text = [NSColor colorWithCalibratedWhite:0.94 alpha:1];
+        fill = [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.06];
+        border = [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.12];
+        text = [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.92];
     }
     [fill set]; [bg fill];
+    // glassy top sheen
+    [NSGraphicsContext saveGraphicsState];
+    [bg addClip];
+    NSGradient *sheen = [[NSGradient alloc] initWithColorsAndLocations:
+        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:(self.isDraw && self.on ? 0.20 : 0.10)], 0.0,
+        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.0], 0.55, nil];
+    [sheen drawInRect:self.bounds angle:270.0];
+    [NSGraphicsContext restoreGraphicsState];
     [border set]; [bg setLineWidth:1.0]; [bg stroke];
+
     NSDictionary *attr = @{ NSForegroundColorAttributeName:text,
-        NSFontAttributeName:[NSFont systemFontOfSize:13 weight:NSFontWeightMedium] };
+        NSFontAttributeName:[NSFont systemFontOfSize:14 weight:NSFontWeightSemibold] };
     NSSize sz = [self.title sizeWithAttributes:attr];
     [self.title drawAtPoint:NSMakePoint(NSMidX(self.bounds)-sz.width/2, NSMidY(self.bounds)-sz.height/2)
               withAttributes:attr];
@@ -173,10 +210,10 @@ static NSMutableArray *gWidthPills = nil;
         self.wantsLayer = YES;
         if (on) {
             CABasicAnimation *a = [CABasicAnimation animationWithKeyPath:@"shadowOpacity"];
-            a.fromValue = @0.25; a.toValue = @0.6; a.duration = 1.3;
+            a.fromValue = @0.3; a.toValue = @0.7; a.duration = 1.3;
             a.autoreverses = YES; a.repeatCount = HUGE_VALF;
             self.layer.shadowColor = KakiAccent().CGColor;
-            self.layer.shadowRadius = 10; self.layer.shadowOffset = CGSizeZero;
+            self.layer.shadowRadius = 11; self.layer.shadowOffset = CGSizeZero;
             [self.layer addAnimation:a forKey:@"pulse"];
         } else {
             [self.layer removeAnimationForKey:@"pulse"];
@@ -200,10 +237,25 @@ void KakiHUDSetDrawState(int on) {
 @end
 static KakiHUDDelegate *gHUDDelegate = nil;
 
+// Helper: a borderless label with no background.
+static NSTextField *KakiLabel(NSRect frame, NSFont *font, NSColor *color, NSString *text) {
+    NSTextField *t = [[NSTextField alloc] initWithFrame:frame];
+    [t setBezeled:NO]; [t setEditable:NO]; [t setSelectable:NO]; [t setDrawsBackground:NO];
+    t.font = font; t.textColor = color; t.stringValue = text;
+    return t;
+}
+
 NSPanel *KakiMakeHUD(void) {
     if (!gColorObserver) gColorObserver = [[KakiColorObserver alloc] init];
 
-    NSRect frame = NSMakeRect(0, 0, 268, 300); // height refined as controls are added
+    // ---- Layout constants (bottom-left origin; no overlaps) ----
+    const CGFloat W = 280, H = 308, P = 22;
+    const CGFloat cell = 48, colStep = 62;            // 4 cols: x = P + col*colStep
+    const CGFloat rowTop = 190, rowStep = 62;         // 2 rows: y = rowTop - row*rowStep
+    const CGFloat pillY = 78,  pillH = 32, pillW = 69, pillStep = 83;
+    const CGFloat btnY = 22,   btnH = 42;
+
+    NSRect frame = NSMakeRect(0, 0, W, H);
     NSPanel *panel = [[NSPanel alloc]
         initWithContentRect:frame
                   styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskNonactivatingPanel
@@ -217,13 +269,13 @@ NSPanel *KakiMakeHUD(void) {
         NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary];
     [panel setMovableByWindowBackground:YES];
 
-    // Vibrancy (dark blur) behind a rounded content view.
+    // Vibrancy (dark blur) behind the rounded glass backdrop.
     NSVisualEffectView *vfx = [[NSVisualEffectView alloc] initWithFrame:frame];
     vfx.material = NSVisualEffectMaterialHUDWindow;
     vfx.blendingMode = NSVisualEffectBlendingModeBehindWindow;
     vfx.state = NSVisualEffectStateActive;
     vfx.wantsLayer = YES;
-    vfx.layer.cornerRadius = 22;
+    vfx.layer.cornerRadius = kHUDRadius;
     vfx.layer.masksToBounds = YES;
     [panel setContentView:vfx];
 
@@ -234,37 +286,27 @@ NSPanel *KakiMakeHUD(void) {
     gSwatches = [NSMutableArray array];
 
     // --- Wordmark row (柿 kaki) ---
-    gKanji = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 258, 30, 28)];
-    [gKanji setBezeled:NO]; [gKanji setEditable:NO]; [gKanji setSelectable:NO];
-    [gKanji setDrawsBackground:NO];
-    gKanji.font = KakiWordmarkFont(20);
-    gKanji.stringValue = @"柿";
-    // light hairline so dark/black inks stay legible on the dark panel
-    gKanji.wantsLayer = YES;
-    gKanji.layer.shadowColor = [NSColor colorWithCalibratedWhite:1 alpha:0.5].CGColor;
-    gKanji.layer.shadowRadius = 0.6; gKanji.layer.shadowOpacity = 1.0;
+    gKanji = KakiLabel(NSMakeRect(P, 256, 34, 32), KakiWordmarkFont(24),
+                       [NSColor whiteColor], @"柿");
+    gKanji.wantsLayer = YES; // faint light hairline keeps black/white inks legible
+    gKanji.layer.shadowColor = [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.5].CGColor;
+    gKanji.layer.shadowRadius = 0.7; gKanji.layer.shadowOpacity = 1.0;
     gKanji.layer.shadowOffset = CGSizeZero;
     [bg addSubview:gKanji];
+    [bg addSubview:KakiLabel(NSMakeRect(P+34, 258, 140, 26), KakiWordmarkFont(19),
+                             [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.95], @"kaki")];
 
-    NSTextField *name = [[NSTextField alloc] initWithFrame:NSMakeRect(50, 260, 120, 24)];
-    [name setBezeled:NO]; [name setEditable:NO]; [name setSelectable:NO]; [name setDrawsBackground:NO];
-    name.font = KakiWordmarkFont(18);
-    name.textColor = [NSColor colorWithCalibratedWhite:0.94 alpha:1.0];
-    name.stringValue = @"kaki";
-    [bg addSubview:name];
-
-    // --- Colour grid (4 columns x 2 rows): 7 presets + "+" ---
-    CGFloat gx = 20, gy = 150, cell = 52, gap = 6;
+    // --- Colour grid (4 cols x 2 rows): 7 presets + "+" ---
     void (^applyColor)(CGFloat,CGFloat,CGFloat) = ^(CGFloat r, CGFloat g, CGFloat b){
         goSetColor(r, g, b, 1.0);
-        gKanji.textColor = [NSColor colorWithCalibratedRed:r green:g blue:b alpha:1.0];
+        gKanji.textColor = [NSColor colorWithSRGBRed:r green:g blue:b alpha:1.0];
     };
     for (int i = 0; i < kPresetCount; i++) {
         int col = i % 4, row = i / 4;
-        NSRect fr = NSMakeRect(gx + col*(cell+gap), gy - row*(cell+gap), cell, cell);
+        NSRect fr = NSMakeRect(P + col*colStep, rowTop - row*rowStep, cell, cell);
         KakiSwatch *sw = [[KakiSwatch alloc] initWithFrame:fr];
         KakiColor kc = kPresetColors[i];
-        sw.fill = [NSColor colorWithCalibratedRed:kc.r green:kc.g blue:kc.b alpha:1.0];
+        sw.fill = [NSColor colorWithSRGBRed:kc.r green:kc.g blue:kc.b alpha:1.0];
         sw.onPick = ^(NSColor *c){
             for (KakiSwatch *s in gSwatches) s.selected = NO;
             sw.selected = YES;
@@ -275,18 +317,16 @@ NSPanel *KakiMakeHUD(void) {
         [bg addSubview:sw];
     }
     // "+" custom-picker cell at grid index 7 (col 3, row 1)
-    NSRect addFr = NSMakeRect(gx + 3*(cell+gap), gy - 1*(cell+gap), cell, cell);
-    KakiSwatch *add = [[KakiSwatch alloc] initWithFrame:addFr];
+    KakiSwatch *add = [[KakiSwatch alloc] initWithFrame:
+        NSMakeRect(P + 3*colStep, rowTop - 1*rowStep, cell, cell)];
     add.isAdd = YES;
     add.onPick = ^(NSColor *c){
         for (KakiSwatch *s in gSwatches) { s.selected = NO; [s setNeedsDisplay:YES]; }
         NSColorPanel *cp = [NSColorPanel sharedColorPanel];
-        [cp setTarget:nil];
-        [cp orderFront:nil];
-        // Observe colour changes via a one-off target set in Task 4 Step 3.
-        gColorPanelKanji = gKanji; // see Step 3
+        gColorPanelKanji = gKanji;
         [cp setAction:@selector(kakiColorChanged:)];
         [cp setTarget:gColorObserver];
+        [cp orderFront:nil];
     };
     [bg addSubview:add];
 
@@ -296,12 +336,11 @@ NSPanel *KakiMakeHUD(void) {
 
     // --- Width pills (thin / medium / thick = 2 / 5 / 10) ---
     gWidthPills = [NSMutableArray array];
-    CGFloat wy = 86, ww = 76, wgap = 6;
     CGFloat widths[3] = {2, 5, 10};
     CGFloat bars[3]   = {2, 4, 8};
     for (int i = 0; i < 3; i++) {
-        NSRect fr = NSMakeRect(20 + i*(ww+wgap), wy, ww, 34);
-        KakiWidthPill *pill = [[KakiWidthPill alloc] initWithFrame:fr];
+        KakiWidthPill *pill = [[KakiWidthPill alloc] initWithFrame:
+            NSMakeRect(P + i*pillStep, pillY, pillW, pillH)];
         pill.lineW = bars[i]; pill.penW = widths[i];
         pill.onPick = ^{
             for (KakiWidthPill *p in gWidthPills) p.selected = NO;
@@ -314,7 +353,7 @@ NSPanel *KakiMakeHUD(void) {
     }
 
     // --- Action buttons: Draw (toggle) / Undo / Clear ---
-    KakiButton *drawBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(20, 40, 110, 40)];
+    KakiButton *drawBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(P, btnY, 116, btnH)];
     drawBtn.title = @"Draw"; drawBtn.isDraw = YES;
     drawBtn.onClick = ^{
         int on = goToggleMode();
@@ -324,12 +363,12 @@ NSPanel *KakiMakeHUD(void) {
     [bg addSubview:drawBtn];
     gDrawButton = drawBtn;
 
-    KakiButton *undoBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(136, 40, 52, 40)];
+    KakiButton *undoBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(P+116+12, btnY, 48, btnH)];
     undoBtn.title = @"↶";
     undoBtn.onClick = ^{ goUndo(); RedrawOverlay(); };
     [bg addSubview:undoBtn];
 
-    KakiButton *clearBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(194, 40, 54, 40)];
+    KakiButton *clearBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(P+116+12+48+12, btnY, 48, btnH)];
     clearBtn.title = @"✕";
     clearBtn.onClick = ^{ goClear(); RedrawOverlay(); };
     [bg addSubview:clearBtn];
@@ -340,9 +379,7 @@ NSPanel *KakiMakeHUD(void) {
 
     // Position near top-centre of the main screen.
     NSRect scr = [[NSScreen mainScreen] visibleFrame];
-    NSPoint origin = NSMakePoint(NSMidX(scr) - frame.size.width/2,
-                                 NSMaxY(scr) - frame.size.height - 40);
-    [panel setFrameOrigin:origin];
+    [panel setFrameOrigin:NSMakePoint(NSMidX(scr) - W/2, NSMaxY(scr) - H - 40)];
     if (!gHUDDelegate) gHUDDelegate = [[KakiHUDDelegate alloc] init];
     [panel setDelegate:gHUDDelegate];
     [panel orderFrontRegardless];
