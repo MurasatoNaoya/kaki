@@ -110,6 +110,11 @@ static NSStatusItem *gStatusItem = nil;
 
 - (void)quit:(id)s { [NSApp terminate:nil]; }
 
+- (void)undo:(id)s {
+    goUndo();
+    [gCanvas setNeedsDisplay:YES];
+}
+
 @end
 
 // Allocated once and owned for the process lifetime (never released under MRC).
@@ -140,6 +145,7 @@ static void buildStatusItem(void) {
     [widthItem setSubmenu:widthMenu];
     [menu addItem:widthItem];
 
+    [menu addItemWithTitle:@"Undo" action:@selector(undo:) keyEquivalent:@""].target = gMenuController;
     [menu addItem:[NSMenuItem separatorItem]];
     [menu addItemWithTitle:@"Clear (⌥⌘C)" action:@selector(clearAll:) keyEquivalent:@""].target = gMenuController;
     [menu addItem:[NSMenuItem separatorItem]];
