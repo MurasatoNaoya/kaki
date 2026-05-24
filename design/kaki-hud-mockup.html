@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaki — HUD mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Sumi & Persimmon palette */
+    --sumi-900:#16140f;        /* deepest ink */
+    --sumi-800:#1f1c16;
+    --panel:#222019;          /* charcoal washi */
+    --panel-edge:rgba(255,255,255,.07);
+    --ink-100:#efe9dd;        /* warm paper text */
+    --ink-300:#b8b09e;
+    --ink-500:#7c7567;
+    --kaki:#e0633a;           /* 柿色 persimmon accent */
+    --kaki-soft:rgba(224,99,58,.16);
+    --kaki-glow:rgba(224,99,58,.55);
+    --radius:22px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  html,body{height:100%}
+  body{
+    font-family:"Zen Kaku Gothic New",sans-serif;
+    background:
+      radial-gradient(120% 90% at 18% 12%, #2b2820 0%, #1a1813 46%, #100f0b 100%);
+    color:var(--ink-100);
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* faint ink brush-strokes behind, hinting at the canvas you draw on */
+  body::before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:
+      radial-gradient(38px 220px at 30% 64%, rgba(224,99,58,.10), transparent 70%),
+      radial-gradient(60px 60px at 72% 30%, rgba(239,233,221,.05), transparent 70%);
+    transform:rotate(-12deg);
+  }
+  /* grain overlay */
+  body::after{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* a soft mock-stroke on the "canvas" so the overlay context reads */
+  .canvas-hint{
+    position:absolute; left:16%; top:30%; width:42vw; height:34vh;
+    pointer-events:none; opacity:.85;
+  }
+  .canvas-hint path{ fill:none; stroke:var(--kaki); stroke-width:7; stroke-linecap:round; opacity:.32;
+    filter:drop-shadow(0 2px 10px rgba(224,99,58,.25)); }
+
+  /* ---------------- HUD ---------------- */
+  .hud{
+    position:relative;
+    width:268px;
+    padding:20px 20px 18px;
+    background:linear-gradient(180deg, rgba(40,37,30,.86), rgba(28,26,20,.92));
+    -webkit-backdrop-filter:blur(26px) saturate(120%);
+    backdrop-filter:blur(26px) saturate(120%);
+    border:1px solid var(--panel-edge);
+    border-radius:var(--radius);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.06) inset,
+      0 24px 60px -12px rgba(0,0,0,.7),
+      0 8px 20px -8px rgba(0,0,0,.6);
+    animation:rise .7s cubic-bezier(.2,.9,.25,1) both;
+  }
+  /* hairline grain inside the panel */
+  .hud::after{
+    content:"";position:absolute;inset:0;border-radius:var(--radius);pointer-events:none;
+    opacity:.06;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  @keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+
+  /* drag handle / titlebar */
+  .hud__bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;cursor:grab}
+  .wordmark{display:flex;align-items:baseline;gap:8px}
+  .wordmark .kanji{
+    font-family:"Shippori Mincho",serif;font-weight:600;font-size:20px;color:var(--kaki);
+    line-height:1;transform:translateY(1px);
+  }
+  .wordmark .name{
+    font-family:"Shippori Mincho",serif;font-weight:600;font-size:19px;letter-spacing:.02em;color:var(--ink-100);
+  }
+  .grip{display:flex;gap:3px}
+  .grip i{width:3px;height:3px;border-radius:50%;background:var(--ink-500);display:block}
+
+  .section-label{
+    font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-500);
+    margin:0 0 9px 2px;font-weight:500;
+  }
+
+  /* colour grid */
+  .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:18px}
+  .sw{
+    aspect-ratio:1;border-radius:50%;cursor:pointer;position:relative;
+    border:1px solid rgba(0,0,0,.35);
+    transition:transform .16s cubic-bezier(.2,.9,.25,1);
+  }
+  .sw:hover{transform:scale(1.12)}
+  .sw::after{ /* selection ring */
+    content:"";position:absolute;inset:-5px;border-radius:50%;
+    border:2px solid var(--kaki);opacity:0;transform:scale(.7);
+    transition:opacity .18s ease, transform .18s cubic-bezier(.2,.9,.25,1);
+  }
+  .sw[data-sel="1"]::after{opacity:1;transform:scale(1)}
+  .sw[data-sel="1"]{box-shadow:0 0 14px var(--kaki-glow)}
+  .sw.add{
+    background:transparent;border:1.5px dashed var(--ink-500);
+    display:flex;align-items:center;justify-content:center;color:var(--ink-300);font-size:16px;font-weight:300;
+  }
+  .sw.add:hover{border-color:var(--kaki);color:var(--kaki)}
+  .sw.light{border-color:rgba(255,255,255,.25)}
+
+  /* width row */
+  .widths{display:flex;gap:9px;margin-bottom:18px}
+  .w{
+    flex:1;height:34px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.035);border:1px solid var(--panel-edge);
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .w:hover{background:rgba(255,255,255,.07)}
+  .w .bar{background:var(--ink-100);border-radius:99px;transition:background .15s ease}
+  .w[data-w="thin"]  .bar{width:18px;height:2px}
+  .w[data-w="med"]   .bar{width:18px;height:4px}
+  .w[data-w="thick"] .bar{width:18px;height:8px}
+  .w[data-sel="1"]{border-color:var(--kaki);background:var(--kaki-soft)}
+  .w[data-sel="1"] .bar{background:var(--kaki)}
+
+  /* actions */
+  .actions{display:flex;gap:9px}
+  .btn{
+    height:40px;border-radius:13px;cursor:pointer;border:1px solid var(--panel-edge);
+    background:rgba(255,255,255,.035);color:var(--ink-100);
+    font-family:"Zen Kaku Gothic New",sans-serif;font-size:13px;font-weight:500;letter-spacing:.02em;
+    display:flex;align-items:center;justify-content:center;gap:7px;
+    transition:transform .12s ease, background .15s ease, border-color .15s ease, box-shadow .2s ease;
+  }
+  .btn:hover{background:rgba(255,255,255,.08);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  .btn-draw{flex:1.4;background:var(--kaki-soft);border-color:rgba(224,99,58,.4);color:#f6d2c4}
+  .btn-draw .dot{width:7px;height:7px;border-radius:50%;background:var(--ink-500);transition:all .2s ease}
+  .btn-draw[data-on="1"]{
+    background:linear-gradient(180deg,#e86c43,#cf552d);border-color:#f08259;color:#fff;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 6px 18px -4px var(--kaki-glow);
+    animation:pulse 2.6s ease-in-out infinite;
+  }
+  .btn-draw[data-on="1"] .dot{background:#fff;box-shadow:0 0 8px #fff}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 6px 18px -4px var(--kaki-glow)}50%{box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 8px 26px -2px var(--kaki-glow)}}
+  .btn-icon{flex:1}
+
+  .footnote{margin-top:14px;text-align:center;font-size:10.5px;color:var(--ink-500);letter-spacing:.04em}
+  .footnote b{color:var(--ink-300);font-weight:500}
+  kbd{font-family:"Zen Kaku Gothic New";background:rgba(255,255,255,.06);border:1px solid var(--panel-edge);
+    border-radius:5px;padding:1px 5px;font-size:10px;color:var(--ink-100)}
+
+  /* staggered reveal of inner blocks */
+  .reveal{opacity:0;animation:fade .5s ease forwards}
+  .reveal:nth-child(1){animation-delay:.10s}
+  .reveal:nth-child(2){animation-delay:.16s}
+  .reveal:nth-child(3){animation-delay:.22s}
+  .reveal:nth-child(4){animation-delay:.28s}
+  .reveal:nth-child(5){animation-delay:.34s}
+  @keyframes fade{to{opacity:1}}
+
+  .caption{position:absolute;bottom:26px;left:0;right:0;text-align:center;color:var(--ink-500);
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+</style>
+</head>
+<body>
+
+  <svg class="canvas-hint" viewBox="0 0 400 300" preserveAspectRatio="none">
+    <path d="M20,180 C90,60 150,250 220,120 S330,60 380,150"/>
+  </svg>
+
+  <div class="hud" id="hud">
+    <div class="hud__bar reveal">
+      <div class="wordmark">
+        <span class="kanji">柿</span>
+        <span class="name">kaki</span>
+      </div>
+      <div class="grip"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <div class="reveal">
+      <p class="section-label">Colour</p>
+      <div class="swatches" id="swatches">
+        <div class="sw" style="background:#e5484d" data-sel="1"></div>
+        <div class="sw" style="background:#f5821f"></div>
+        <div class="sw" style="background:#f2c12e"></div>
+        <div class="sw" style="background:#2fae5e"></div>
+        <div class="sw" style="background:#2f6fed"></div>
+        <div class="sw" style="background:#16140f"></div>
+        <div class="sw light" style="background:#ffffff"></div>
+        <div class="sw add" title="Custom colour">+</div>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <p class="section-label">Width</p>
+      <div class="widths" id="widths">
+        <div class="w" data-w="thin"><span class="bar"></span></div>
+        <div class="w" data-w="med" data-sel="1"><span class="bar"></span></div>
+        <div class="w" data-w="thick"><span class="bar"></span></div>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <div class="actions">
+        <div class="btn btn-draw" id="draw" data-on="0"><span class="dot"></span><span>Draw</span></div>
+        <div class="btn btn-icon" id="undo" title="Undo">
+          <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
+        </div>
+        <div class="btn btn-icon" id="clear" title="Clear">
+          <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <p class="footnote reveal">Draw <kbd>⌥⌘D</kbd>&nbsp;&nbsp;Clear <kbd>⌥⌘C</kbd></p>
+  </div>
+
+  <div class="caption">Kaki · control HUD — static mockup</div>
+
+<script>
+  // selection behaviour (mockup only)
+  const sw = document.getElementById('swatches');
+  const kanji = document.querySelector('.wordmark .kanji');
+  function recolorKanji(c){
+    kanji.style.color = c;   // flat colour change, no glow
+  }
+  sw.addEventListener('click', e=>{
+    const t = e.target.closest('.sw'); if(!t || t.classList.contains('add')) return;
+    sw.querySelectorAll('.sw').forEach(s=>s.removeAttribute('data-sel'));
+    t.setAttribute('data-sel','1');
+    recolorKanji(t.style.background);   // 柿 tracks the active pen colour
+  });
+  recolorKanji('#e5484d'); // initial = red (default pen)
+  const wd = document.getElementById('widths');
+  wd.addEventListener('click', e=>{
+    const t = e.target.closest('.w'); if(!t) return;
+    wd.querySelectorAll('.w').forEach(s=>s.removeAttribute('data-sel'));
+    t.setAttribute('data-sel','1');
+  });
+  const draw = document.getElementById('draw');
+  draw.addEventListener('click', ()=> draw.setAttribute('data-on', draw.getAttribute('data-on')==='1'?'0':'1'));
+  // mark white swatch (none here) helper left for parity
+</script>
+</body>
+</html>
