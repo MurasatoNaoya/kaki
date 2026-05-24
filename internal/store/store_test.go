@@ -1,6 +1,9 @@
 package store
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestBeginAddEndBuildsStroke(t *testing.T) {
 	s := New()
@@ -90,7 +93,7 @@ func TestToggleModeFlipsAndReturnsNewState(t *testing.T) {
 	if s.DrawMode() {
 		t.Fatal("draw mode should default to off")
 	}
-	if got := s.ToggleMode(); got != true {
+	if got := s.ToggleMode(); !got {
 		t.Fatalf("first toggle should return true, got %v", got)
 	}
 	if !s.DrawMode() {
@@ -131,8 +134,40 @@ func TestSnapshotIncludesInProgressStroke(t *testing.T) {
 	s := New()
 	s.BeginStroke(1, 2) // not ended
 	got := s.Snapshot()
-	if got[0] != 1 {
-		t.Fatalf("in-progress stroke should be counted; got count %v (%v)", got[0], got)
+	// count=1, RGBA=1,0,0,1, width=3, pointCount=1, point (1,2)
+	want := []float64{1, 1, 0, 0, 1, 3, 1, 1, 2}
+	if !slices.Equal(got, want) {
+		t.Fatalf("in-progress snapshot mismatch:\n got  %v\n want %v", got, want)
+	}
+}
+
+func TestSnapshotMixedCommittedAndInProgress(t *testing.T) {
+	s := New()
+	s.BeginStroke(10, 20)
+	s.EndStroke() // committed
+	s.BeginStroke(30, 40) // in-progress, not ended
+
+	got := s.Snapshot()
+	// count=2; each stroke: RGBA 1,0,0,1, width 3, pointCount 1, then its point
+	want := []float64{2, 1, 0, 0, 1, 3, 1, 10, 20, 1, 0, 0, 1, 3, 1, 30, 40}
+	if !slices.Equal(got, want) {
+		t.Fatalf("mixed snapshot mismatch:\n got  %v\n want %v", got, want)
+	}
+}
+
+func TestClearPreservesInProgressStroke(t *testing.T) {
+	s := New()
+	s.BeginStroke(0, 0)
+	s.EndStroke()        // commit one stroke
+	s.BeginStroke(5, 6) // start a new in-progress stroke (not ended)
+
+	s.Clear()
+
+	if len(s.strokes) != 0 {
+		t.Fatalf("Clear should remove all committed strokes, got %d", len(s.strokes))
+	}
+	if s.current == nil {
+		t.Fatal("Clear should preserve the in-progress stroke, but current is nil")
 	}
 }
 
