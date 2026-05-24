@@ -19,5 +19,9 @@ cp Info.plist "$APP/Contents/Info.plist"
 if [ -f assets/fonts/ShipporiMincho-SemiBold.ttf ]; then
   cp assets/fonts/ShipporiMincho-SemiBold.ttf "$RES/"
 fi
+# App/Dock icon (CFBundleIconFile=Kaki).
+if [ -f assets/icon/Kaki.icns ]; then
+  cp assets/icon/Kaki.icns "$RES/Kaki.icns"
+fi
 
 echo "Done. Launch with:  open $APP"

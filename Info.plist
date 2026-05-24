@@ -10,6 +10,8 @@
     <string>com.kaki.app</string>
     <key>CFBundleExecutable</key>
     <string>kaki</string>
+    <key>CFBundleIconFile</key>
+    <string>Kaki</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleVersion</key>

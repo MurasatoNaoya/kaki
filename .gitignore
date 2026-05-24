@@ -4,3 +4,5 @@ Kaki.app/
 *.o
 *.a
 .DS_Store
+
+assets/icon/Kaki.iconset/
