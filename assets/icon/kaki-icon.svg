@@ -1,57 +1,71 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
-    <radialGradient id="coal" cx="50%" cy="36%" r="80%">
-      <stop offset="0" stop-color="#2c2823"/>
-      <stop offset="1" stop-color="#121110"/>
+    <!-- coal tile: lighter centre, deep shadowed edges -->
+    <radialGradient id="coal" cx="50%" cy="44%" r="72%">
+      <stop offset="0" stop-color="#2b2723"/>
+      <stop offset="0.7" stop-color="#181613"/>
+      <stop offset="1" stop-color="#0b0a09"/>
     </radialGradient>
-    <radialGradient id="halo" cx="50%" cy="56%" r="46%">
-      <stop offset="0" stop-color="#e0633a" stop-opacity="0.55"/>
-      <stop offset="0.6" stop-color="#e0633a" stop-opacity="0.12"/>
+    <!-- inset vignette for deeper shadows in the corners -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="62%">
+      <stop offset="0.6" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.55"/>
+    </radialGradient>
+    <!-- warm glow the fruit casts onto the coal -->
+    <radialGradient id="halo" cx="50%" cy="55%" r="44%">
+      <stop offset="0" stop-color="#f2742e" stop-opacity="0.5"/>
+      <stop offset="0.55" stop-color="#e0633a" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#e0633a" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="body" cx="40%" cy="34%" r="78%">
-      <stop offset="0" stop-color="#f4965d"/>
-      <stop offset="0.45" stop-color="#e0633a"/>
-      <stop offset="1" stop-color="#a6331a"/>
+    <!-- body: hot core, sharp falloff to deep red -->
+    <radialGradient id="body" cx="48%" cy="44%" r="66%">
+      <stop offset="0" stop-color="#ffce82"/>
+      <stop offset="0.22" stop-color="#f79a46"/>
+      <stop offset="0.5" stop-color="#e8662a"/>
+      <stop offset="0.78" stop-color="#c0421a"/>
+      <stop offset="1" stop-color="#7e2410"/>
     </radialGradient>
     <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffffff" stop-opacity="0.40"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
     <linearGradient id="calyx" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#7e8730"/>
-      <stop offset="1" stop-color="#525b20"/>
+      <stop offset="0" stop-color="#94a766"/>
+      <stop offset="1" stop-color="#5f7438"/>
     </linearGradient>
     <linearGradient id="stem" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#8c6c3c"/>
-      <stop offset="1" stop-color="#5d4322"/>
+      <stop offset="0" stop-color="#7e5f33"/>
+      <stop offset="1" stop-color="#553d1f"/>
     </linearGradient>
   </defs>
 
-  <!-- coal tile -->
   <rect width="1024" height="1024" fill="url(#coal)"/>
-  <!-- warm halo -->
-  <circle cx="512" cy="600" r="400" fill="url(#halo)"/>
+  <circle cx="512" cy="572" r="400" fill="url(#halo)"/>
 
-  <!-- body: oblate persimmon -->
-  <ellipse cx="512" cy="600" rx="300" ry="252" fill="url(#body)"/>
-  <!-- faint vertical lobes -->
-  <g stroke="#8f2c16" stroke-width="6" fill="none" opacity="0.30" stroke-linecap="round">
-    <path d="M388 410 C336 540 336 700 412 808"/>
-    <path d="M636 410 C688 540 688 700 612 808"/>
+  <!-- stem behind calyx -->
+  <rect x="500" y="286" width="24" height="46" rx="12" fill="url(#stem)"/>
+
+  <!-- body -->
+  <ellipse cx="512" cy="572" rx="286" ry="258" fill="url(#body)"/>
+  <g stroke="#8c2c16" stroke-width="6" fill="none" opacity="0.20" stroke-linecap="round">
+    <path d="M404 392 C356 524 356 688 428 784"/>
+    <path d="M620 392 C668 524 668 688 596 784"/>
   </g>
-  <!-- glossy highlight -->
-  <ellipse cx="430" cy="470" rx="120" ry="74" fill="url(#gloss)"/>
+  <ellipse cx="436" cy="456" rx="112" ry="66" fill="url(#gloss)"/>
 
-  <!-- woody stem -->
-  <rect x="498" y="236" width="28" height="86" rx="14" fill="url(#stem)"/>
+  <!-- compact sage calyx on top -->
+  <path d="M512 320
+           C480 320 462 344 452 374
+           C408 360 368 368 352 400
+           C396 418 442 410 476 392
+           C484 414 496 428 512 428
+           C528 428 540 414 548 392
+           C582 410 628 418 672 400
+           C656 368 616 360 572 374
+           C562 344 544 320 512 320 Z"
+        fill="url(#calyx)" stroke="#414d22" stroke-width="3"/>
+  <circle cx="512" cy="374" r="15" fill="#5f7438"/>
 
-  <!-- calyx: four leaves draping over the top -->
-  <g transform="translate(512,372)" fill="url(#calyx)" stroke="#3f471a" stroke-width="3">
-    <g transform="rotate(-42)"><path d="M0 0 C-30 -52 -30 -110 0 -132 C30 -110 30 -52 0 0 Z"/></g>
-    <g transform="rotate(42)"><path d="M0 0 C-30 -52 -30 -110 0 -132 C30 -110 30 -52 0 0 Z"/></g>
-    <g transform="rotate(-104)"><path d="M0 0 C-28 -48 -28 -102 0 -122 C28 -102 28 -48 0 0 Z"/></g>
-    <g transform="rotate(104)"><path d="M0 0 C-28 -48 -28 -102 0 -122 C28 -102 28 -48 0 0 Z"/></g>
-    <circle r="18" fill="#566022" stroke="none"/>
-  </g>
+  <!-- deepen the shadows last -->
+  <rect width="1024" height="1024" fill="url(#vignette)"/>
 </svg>
