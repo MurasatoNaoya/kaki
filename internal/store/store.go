@@ -89,6 +89,13 @@ func (s *Store) ToggleMode() bool {
 	return s.drawMode
 }
 
+// SetMode forces draw mode to an explicit state. Unlike ToggleMode it is
+// idempotent, which is what the Escape break-glass needs: exiting must always
+// land in the off state, never flip back on if already off.
+func (s *Store) SetMode(on bool) {
+	s.drawMode = on
+}
+
 // Snapshot serializes all strokes (committed plus any in-progress one) into a
 // flat slice for the renderer. Layout:
 //

@@ -12,6 +12,10 @@
 static NSWindow *gWindow = nil;
 static NSView   *gCanvas = nil;
 
+// Break-glass: force draw mode OFF, release mouse capture, and resurface the HUD.
+// Defined below (needs gHUD); declared here so CanvasView's keyDown can call it.
+static void KakiExitDrawMode(void);
+
 // Borderless/non-activating panels won't become key by default, so clicks
 // are dropped. Override canBecomeKeyWindow so the overlay receives mouse input.
 @interface OverlayPanel : NSPanel
@@ -30,6 +34,18 @@ static NSView   *gCanvas = nil;
 - (BOOL)isFlipped { return NO; } // bottom-left origin, matches mouse coords
 
 - (BOOL)acceptsFirstMouse:(NSEvent *)e { return YES; } // first click after focus loss still draws
+
+- (BOOL)acceptsFirstResponder { return YES; } // so Escape (break-glass) reaches keyDown
+
+// Break-glass: Escape always exits draw mode, no matter what's focused. The
+// overlay is key while drawing, so this keyDown is guaranteed to fire there.
+- (void)keyDown:(NSEvent *)e {
+    if (e.keyCode == 53 /* kVK_Escape */) {
+        KakiExitDrawMode();
+        return;
+    }
+    [super keyDown:e];
+}
 
 - (void)drawRect:(NSRect)dirtyRect {
     [[NSColor clearColor] set];
@@ -191,9 +207,22 @@ static void registerBundledFont(void) {
 
 void ApplyDrawMode(int on) {
     [gWindow setIgnoresMouseEvents:(on ? NO : YES)];
-    if (on) { [gWindow makeKeyAndOrderFront:nil]; }
+    if (on) {
+        [gWindow makeKeyAndOrderFront:nil];
+        [gWindow makeFirstResponder:gCanvas]; // so Escape reaches the canvas keyDown
+    }
 }
 void RedrawOverlay(void) { [gCanvas setNeedsDisplay:YES]; }
+
+// Break-glass exit: force draw OFF (idempotent), release the screen-wide mouse
+// capture, sync the HUD's Draw button, and re-show the HUD so the user is never
+// stranded with an invisible, input-swallowing overlay.
+static void KakiExitDrawMode(void) {
+    goSetMode(0);
+    ApplyDrawMode(0);
+    KakiHUDSetDrawState(0);
+    if (gHUD) { [gHUD orderFrontRegardless]; }
+}
 
 // ---- Entry point ----
 

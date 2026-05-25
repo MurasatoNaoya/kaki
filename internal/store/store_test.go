@@ -104,6 +104,25 @@ func TestToggleModeFlipsAndReturnsNewState(t *testing.T) {
 	}
 }
 
+func TestSetModeForcesStateRegardlessOfCurrent(t *testing.T) {
+	s := New()
+	// Off -> off: a panic exit must stay off, never toggle on.
+	s.SetMode(false)
+	if s.DrawMode() {
+		t.Fatal("SetMode(false) on an already-off store must stay off")
+	}
+	// Off -> on.
+	s.SetMode(true)
+	if !s.DrawMode() {
+		t.Fatal("SetMode(true) should turn draw mode on")
+	}
+	// On -> off (the break-glass case).
+	s.SetMode(false)
+	if s.DrawMode() {
+		t.Fatal("SetMode(false) should turn draw mode off")
+	}
+}
+
 func TestSnapshotLayout(t *testing.T) {
 	s := New()
 	s.SetColor(0.1, 0.2, 0.3, 0.4)

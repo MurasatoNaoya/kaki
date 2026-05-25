@@ -44,6 +44,9 @@ func goToggleMode() C.int {
 	return 0
 }
 
+//export goSetMode
+func goSetMode(on C.int) { gStore.SetMode(on != 0) }
+
 //export goSetColor
 func goSetColor(r, g, b, a C.double) {
 	gStore.SetColor(float64(r), float64(g), float64(b), float64(a))
