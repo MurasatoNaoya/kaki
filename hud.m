@@ -20,6 +20,16 @@ static NSFont *KakiWordmarkFont(CGFloat size) {
     return f;
 }
 
+// Spatial-standard spring (M3-style motion token): stiffness 180, damping ratio ~0.8,
+// mass 1. Slight overshoot, settles cleanly. Used for spatial moves like the selection ring.
+static CASpringAnimation *KakiSpatialScale(CGFloat from, CGFloat to) {
+    CASpringAnimation *a = [CASpringAnimation animationWithKeyPath:@"transform.scale"];
+    a.mass = 1.0; a.stiffness = 180.0; a.damping = 21.5; a.initialVelocity = 0.0;
+    a.fromValue = @(from); a.toValue = @(to);
+    a.duration = a.settlingDuration;
+    return a;
+}
+
 // Content container layered over the Liquid Glass surface. The glass itself
 // supplies the translucency, refraction and edge lighting, so this view stays
 // transparent — only a whisper-fine hairline to crisp the rounded edge.
@@ -60,9 +70,42 @@ static NSMutableArray *gSwatches = nil;
 @property (nonatomic) BOOL selected;
 @property (nonatomic) BOOL isAdd;      // the "+" custom-picker cell
 @property (nonatomic, copy) void (^onPick)(NSColor *);
+@property (nonatomic, retain) CAShapeLayer *ring;  // offset selection ring (spring-animated)
 @end
 
 @implementation KakiSwatch
+- (instancetype)initWithFrame:(NSRect)f {
+    if ((self = [super initWithFrame:f])) {
+        self.wantsLayer = YES;
+        _ring = [CAShapeLayer layer];
+        _ring.frame = self.bounds;
+        _ring.fillColor = NULL;
+        _ring.strokeColor = KakiAccent().CGColor;
+        _ring.lineWidth = 2.0;
+        _ring.opacity = 0.0;          // a gap between the bead and the ring
+        CGMutablePathRef p = CGPathCreateMutable();
+        CGPathAddEllipseInRect(p, NULL, NSInsetRect(self.bounds, 2, 2));
+        _ring.path = p; CGPathRelease(p);
+        [self.layer addSublayer:_ring];
+    }
+    return self;
+}
+- (void)setSelected:(BOOL)selected {
+    _selected = selected;
+    if (!_ring || self.isAdd) return;
+    _ring.transform = CATransform3DIdentity;
+    _ring.opacity = selected ? 1.0 : 0.0;
+    if ([[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion]) return;
+    CABasicAnimation *o = [CABasicAnimation animationWithKeyPath:@"opacity"];
+    o.duration = 0.12;
+    if (selected) {
+        o.fromValue = @0.0; o.toValue = @1.0;
+        [_ring addAnimation:KakiSpatialScale(0.55, 1.0) forKey:@"pop"]; // spatial standard
+    } else {
+        o.fromValue = @1.0; o.toValue = @0.0;
+    }
+    [_ring addAnimation:o forKey:@"fade"];
+}
 - (void)drawRect:(NSRect)r {
     NSRect c = NSInsetRect(self.bounds, 5, 5);
     NSBezierPath *circle = [NSBezierPath bezierPathWithOvalInRect:c];
@@ -97,13 +140,7 @@ static NSMutableArray *gSwatches = nil;
                          alpha:(isWhite?0.5:0.12)] set];
     [circle setLineWidth:1.0];
     [circle stroke];
-
-    if (self.selected) {
-        NSBezierPath *ring = [NSBezierPath bezierPathWithOvalInRect:NSInsetRect(self.bounds, 1.25, 1.25)];
-        [KakiAccent() set];
-        [ring setLineWidth:2.5];
-        [ring stroke];
-    }
+    // Selection ring is a spring-animated sublayer (see setSelected:), not drawn here.
 }
 - (void)mouseDown:(NSEvent *)e { if (self.onPick) self.onPick(self.fill); }
 @end
