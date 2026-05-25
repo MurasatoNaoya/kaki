@@ -23,7 +23,7 @@ static NSFont *KakiWordmarkFont(CGFloat size) {
 // Content container layered over the Liquid Glass surface. The glass itself
 // supplies the translucency, refraction and edge lighting, so this view stays
 // transparent — only a whisper-fine hairline to crisp the rounded edge.
-static const CGFloat kHUDRadius = 26.0;
+static const CGFloat kHUDRadius = 16.0;
 
 @interface KakiBackdrop : NSView
 @end
@@ -231,12 +231,23 @@ static NSTextField *KakiLabel(NSRect frame, NSFont *font, NSColor *color, NSStri
 NSPanel *KakiMakeHUD(void) {
     if (!gColorObserver) gColorObserver = [[KakiColorObserver alloc] init];
 
-    // ---- Layout constants (bottom-left origin; no overlaps) ----
-    const CGFloat W = 280, H = 308, P = 22;
-    const CGFloat cell = 48, colStep = 62;            // 4 cols: x = P + col*colStep
-    const CGFloat rowTop = 190, rowStep = 62;         // 2 rows: y = rowTop - row*rowStep
-    const CGFloat pillY = 78,  pillH = 32, pillW = 69, pillStep = 83;
-    const CGFloat btnY = 22,   btnH = 42;
+    // ---- Smoke Bar: one compact dark-glass row, controls grouped left to right ----
+    const CGFloat H = 52, P = 14, cy = H / 2.0;
+    const CGFloat sd = 24, sgap = 4;            // swatch box + gap
+    const CGFloat pw = 30, ph = 26, pgap = 5;   // width pill
+    const CGFloat bh = 30, dw = 58, iw = 30, cw = 24; // button heights / widths
+    const CGFloat g = 8, gg = 14;               // item gap / group gap
+
+    // First pass: place items left to right, accumulate total width.
+    CGFloat x = P;
+    CGFloat xWord  = x; x += 26 + g;
+    CGFloat xSw    = x; x += (kPresetCount + 1) * (sd + sgap) - sgap + gg; // presets + "+"
+    CGFloat xPill  = x; x += 3 * pw + 2 * pgap + gg;
+    CGFloat xDraw  = x; x += dw + g;
+    CGFloat xUndo  = x; x += iw + g;
+    CGFloat xClear = x; x += iw + gg;
+    CGFloat xClose = x; x += cw;
+    const CGFloat W = x + P;
 
     NSRect frame = NSMakeRect(0, 0, W, H);
     NSPanel *panel = [[NSPanel alloc]
@@ -246,54 +257,44 @@ NSPanel *KakiMakeHUD(void) {
                       defer:NO];
     [panel setOpaque:NO];
     [panel setBackgroundColor:[NSColor clearColor]];
-    [panel setAlphaValue:0.88]; // ride more transparent — less of a grey tile
     [panel setHasShadow:YES];
     [panel setLevel:NSStatusWindowLevel + 2]; // above the overlay (overlay is +1)
     [panel setCollectionBehavior:
         NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary];
     [panel setMovableByWindowBackground:YES];
 
-    // Liquid Glass surface (macOS 26+): translucent, refractive, edge-lit — and
-    // crucially not the flat dark-grey of the old HUD vibrancy material.
+    // Smoke: dark-tinted Liquid Glass so the bar stays legible over bright screens.
     NSGlassEffectView *glass = [[NSGlassEffectView alloc] initWithFrame:frame];
     glass.cornerRadius = kHUDRadius;
-    glass.style = NSGlassEffectViewStyleClear; // clear, not the frosted (grey) regular glass
-    glass.tintColor = nil;                     // no tint
+    glass.style = NSGlassEffectViewStyleClear;
+    glass.tintColor = [NSColor colorWithSRGBRed:0.05 green:0.05 blue:0.07 alpha:0.55];
     [panel setContentView:glass];
 
-    // Controls live in this transparent container, set as the glass content view.
     KakiBackdrop *bg = [[KakiBackdrop alloc] initWithFrame:frame];
     bg.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     glass.contentView = bg;
 
     gSwatches = [NSMutableArray array];
 
-    // --- Wordmark row (柿 kaki) ---
-    gKanji = KakiLabel(NSMakeRect(P, 256, 34, 32), KakiWordmarkFont(24),
+    // 柿 wordmark, recoloured to the active pen colour (light hairline keeps it legible).
+    gKanji = KakiLabel(NSMakeRect(xWord, cy - 14, 26, 28), KakiWordmarkFont(20),
                        [NSColor whiteColor], @"柿");
-    gKanji.wantsLayer = YES; // faint light hairline keeps black/white inks legible
+    gKanji.wantsLayer = YES;
     gKanji.layer.shadowColor = [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.5].CGColor;
     gKanji.layer.shadowRadius = 0.7; gKanji.layer.shadowOpacity = 1.0;
     gKanji.layer.shadowOffset = CGSizeZero;
     [bg addSubview:gKanji];
-    [bg addSubview:KakiLabel(NSMakeRect(P+34, 258, 140, 26), KakiWordmarkFont(19),
-                             [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.95], @"kaki")];
 
-    // --- Close button (top-right): hides the HUD; reopens from the Dock icon ---
-    KakiButton *closeBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(W - P - 24, 258, 24, 24)];
-    closeBtn.title = @"✕";
-    closeBtn.onClick = ^{ [panel orderOut:nil]; };
-    [bg addSubview:closeBtn];
-
-    // --- Colour grid (4 cols x 2 rows): 7 presets + "+" ---
-    void (^applyColor)(CGFloat,CGFloat,CGFloat) = ^(CGFloat r, CGFloat g, CGFloat b){
-        goSetColor(r, g, b, 1.0);
-        gKanji.textColor = [NSColor colorWithSRGBRed:r green:g blue:b alpha:1.0];
+    void (^applyColor)(CGFloat,CGFloat,CGFloat) = ^(CGFloat r, CGFloat gn, CGFloat b){
+        goSetColor(r, gn, b, 1.0);
+        gKanji.textColor = [NSColor colorWithSRGBRed:r green:gn blue:b alpha:1.0];
     };
+
+    // Colour swatches (7 presets + custom "+"), inline.
+    CGFloat sy = cy - sd / 2.0;
     for (int i = 0; i < kPresetCount; i++) {
-        int col = i % 4, row = i / 4;
-        NSRect fr = NSMakeRect(P + col*colStep, rowTop - row*rowStep, cell, cell);
-        KakiSwatch *sw = [[KakiSwatch alloc] initWithFrame:fr];
+        KakiSwatch *sw = [[KakiSwatch alloc] initWithFrame:
+            NSMakeRect(xSw + i*(sd+sgap), sy, sd, sd)];
         KakiColor kc = kPresetColors[i];
         sw.fill = [NSColor colorWithSRGBRed:kc.r green:kc.g blue:kc.b alpha:1.0];
         sw.onPick = ^(NSColor *c){
@@ -305,9 +306,8 @@ NSPanel *KakiMakeHUD(void) {
         [gSwatches addObject:sw];
         [bg addSubview:sw];
     }
-    // "+" custom-picker cell at grid index 7 (col 3, row 1)
     KakiSwatch *add = [[KakiSwatch alloc] initWithFrame:
-        NSMakeRect(P + 3*colStep, rowTop - 1*rowStep, cell, cell)];
+        NSMakeRect(xSw + kPresetCount*(sd+sgap), sy, sd, sd)];
     add.isAdd = YES;
     add.onPick = ^(NSColor *c){
         for (KakiSwatch *s in gSwatches) { s.selected = NO; [s setNeedsDisplay:YES]; }
@@ -318,18 +318,17 @@ NSPanel *KakiMakeHUD(void) {
         [cp orderFront:nil];
     };
     [bg addSubview:add];
-
-    // Default selection: red.
     ((KakiSwatch *)gSwatches[0]).selected = YES;
     applyColor(kPresetColors[0].r, kPresetColors[0].g, kPresetColors[0].b);
 
-    // --- Width pills (thin / medium / thick = 2 / 5 / 10) ---
+    // Width pills (thin / medium / thick = 2 / 5 / 10).
     gWidthPills = [NSMutableArray array];
     CGFloat widths[3] = {2, 5, 10};
     CGFloat bars[3]   = {2, 4, 8};
+    CGFloat py = cy - ph / 2.0;
     for (int i = 0; i < 3; i++) {
         KakiWidthPill *pill = [[KakiWidthPill alloc] initWithFrame:
-            NSMakeRect(P + i*pillStep, pillY, pillW, pillH)];
+            NSMakeRect(xPill + i*(pw+pgap), py, pw, ph)];
         pill.lineW = bars[i]; pill.penW = widths[i];
         pill.onPick = ^{
             for (KakiWidthPill *p in gWidthPills) p.selected = NO;
@@ -340,31 +339,32 @@ NSPanel *KakiMakeHUD(void) {
         [gWidthPills addObject:pill];
         [bg addSubview:pill];
     }
+    ((KakiWidthPill *)gWidthPills[1]).selected = YES;
+    goSetWidth(5);
 
-    // --- Action buttons: Draw (toggle) / Undo / Clear ---
-    KakiButton *drawBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(P, btnY, 116, btnH)];
+    // Actions: Draw (toggle) / Undo / Clear, with distinct glyphs.
+    CGFloat by = cy - bh / 2.0;
+    KakiButton *drawBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(xDraw, by, dw, bh)];
     drawBtn.title = @"Draw"; drawBtn.isDraw = YES;
-    drawBtn.onClick = ^{
-        int on = goToggleMode();
-        ApplyDrawMode(on);
-        drawBtn.on = (on != 0);
-    };
+    drawBtn.onClick = ^{ int on = goToggleMode(); ApplyDrawMode(on); drawBtn.on = (on != 0); };
     [bg addSubview:drawBtn];
     gDrawButton = drawBtn;
 
-    KakiButton *undoBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(P+116+12, btnY, 48, btnH)];
+    KakiButton *undoBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(xUndo, by, iw, bh)];
     undoBtn.title = @"↶";
     undoBtn.onClick = ^{ goUndo(); RedrawOverlay(); };
     [bg addSubview:undoBtn];
 
-    KakiButton *clearBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(P+116+12+48+12, btnY, 48, btnH)];
-    clearBtn.title = @"✕";
+    KakiButton *clearBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(xClear, by, iw, bh)];
+    clearBtn.title = @"⌫";
     clearBtn.onClick = ^{ goClear(); RedrawOverlay(); };
     [bg addSubview:clearBtn];
 
-    // Default width selection: medium (index 1).
-    ((KakiWidthPill *)gWidthPills[1]).selected = YES;
-    goSetWidth(5);
+    // Close (hides the bar; reopen from the Dock icon). Distinct from Clear's ⌫.
+    KakiButton *closeBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(xClose, by, cw, bh)];
+    closeBtn.title = @"×";
+    closeBtn.onClick = ^{ [panel orderOut:nil]; };
+    [bg addSubview:closeBtn];
 
     // Position near top-centre of the main screen.
     NSRect scr = [[NSScreen mainScreen] visibleFrame];
