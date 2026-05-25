@@ -1,0 +1,5 @@
+# Design mockups are kept as a design history but excluded from the language bar.
+design/** linguist-vendored
+*.html linguist-vendored
+# Workflow and spec docs are documentation, not source.
+docs/** linguist-documentation
