@@ -20,34 +20,17 @@ static NSFont *KakiWordmarkFont(CGFloat size) {
     return f;
 }
 
-// Glass backdrop: a light translucent sumi tint (lets the blur read through), a
-// specular highlight along the top edge, and a fine bright hairline — evoking glass.
+// Content container layered over the Liquid Glass surface. The glass itself
+// supplies the translucency, refraction and edge lighting, so this view stays
+// transparent — only a whisper-fine hairline to crisp the rounded edge.
 static const CGFloat kHUDRadius = 26.0;
 
 @interface KakiBackdrop : NSView
 @end
 @implementation KakiBackdrop
 - (void)drawRect:(NSRect)r {
-    NSBezierPath *p = [NSBezierPath bezierPathWithRoundedRect:self.bounds
-                                                      xRadius:kHUDRadius yRadius:kHUDRadius];
-    // Light sumi tint — low alpha so the vibrancy blur shows through (glassy, not flat).
-    [[NSColor colorWithSRGBRed:0.11 green:0.10 blue:0.09 alpha:0.28] set];
-    [p fill];
-
-    // Specular top highlight (light catching the top of the glass).
-    [NSGraphicsContext saveGraphicsState];
-    [p addClip];
-    NSGradient *spec = [[NSGradient alloc] initWithColorsAndLocations:
-        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.12], 0.0,
-        [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.0],  0.45,
-        nil];
-    [spec drawInRect:self.bounds angle:270.0]; // bright at top, fading down
-    [NSGraphicsContext restoreGraphicsState];
-
-    // Bright hairline edge.
-    [[NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.16] set];
-    [p setLineWidth:1.0];
-    [p stroke];
+    // Fully transparent: no fill, no hairline. The clear glass surface is the
+    // only backdrop, so the panel reads as see-through, not a grey tile.
 }
 - (void)mouseDragged:(NSEvent *)e {
     [self.window performWindowDragWithEvent:e]; // drag the HUD by its body
@@ -263,25 +246,25 @@ NSPanel *KakiMakeHUD(void) {
                       defer:NO];
     [panel setOpaque:NO];
     [panel setBackgroundColor:[NSColor clearColor]];
+    [panel setAlphaValue:0.88]; // ride more transparent — less of a grey tile
     [panel setHasShadow:YES];
     [panel setLevel:NSStatusWindowLevel + 2]; // above the overlay (overlay is +1)
     [panel setCollectionBehavior:
         NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary];
     [panel setMovableByWindowBackground:YES];
 
-    // Vibrancy (dark blur) behind the rounded glass backdrop.
-    NSVisualEffectView *vfx = [[NSVisualEffectView alloc] initWithFrame:frame];
-    vfx.material = NSVisualEffectMaterialHUDWindow;
-    vfx.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-    vfx.state = NSVisualEffectStateActive;
-    vfx.wantsLayer = YES;
-    vfx.layer.cornerRadius = kHUDRadius;
-    vfx.layer.masksToBounds = YES;
-    [panel setContentView:vfx];
+    // Liquid Glass surface (macOS 26+): translucent, refractive, edge-lit — and
+    // crucially not the flat dark-grey of the old HUD vibrancy material.
+    NSGlassEffectView *glass = [[NSGlassEffectView alloc] initWithFrame:frame];
+    glass.cornerRadius = kHUDRadius;
+    glass.style = NSGlassEffectViewStyleClear; // clear, not the frosted (grey) regular glass
+    glass.tintColor = nil;                     // no tint
+    [panel setContentView:glass];
 
+    // Controls live in this transparent container, set as the glass content view.
     KakiBackdrop *bg = [[KakiBackdrop alloc] initWithFrame:frame];
     bg.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-    [vfx addSubview:bg];
+    glass.contentView = bg;
 
     gSwatches = [NSMutableArray array];
 
@@ -295,6 +278,12 @@ NSPanel *KakiMakeHUD(void) {
     [bg addSubview:gKanji];
     [bg addSubview:KakiLabel(NSMakeRect(P+34, 258, 140, 26), KakiWordmarkFont(19),
                              [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.95], @"kaki")];
+
+    // --- Close button (top-right): hides the HUD; reopens from the Dock icon ---
+    KakiButton *closeBtn = [[KakiButton alloc] initWithFrame:NSMakeRect(W - P - 24, 258, 24, 24)];
+    closeBtn.title = @"✕";
+    closeBtn.onClick = ^{ [panel orderOut:nil]; };
+    [bg addSubview:closeBtn];
 
     // --- Colour grid (4 cols x 2 rows): 7 presets + "+" ---
     void (^applyColor)(CGFloat,CGFloat,CGFloat) = ^(CGFloat r, CGFloat g, CGFloat b){
