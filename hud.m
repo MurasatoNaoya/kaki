@@ -30,6 +30,31 @@ static CASpringAnimation *KakiSpatialScale(CGFloat from, CGFloat to) {
     return a;
 }
 
+// Spatial-standard spring on layer position (same token as KakiSpatialScale:
+// stiffness 180, damping 21.5, mass 1). Used to glide the width indicator.
+static CASpringAnimation *KakiSpatialPosition(CGPoint from, CGPoint to) {
+    CASpringAnimation *a = [CASpringAnimation animationWithKeyPath:@"position"];
+    a.mass = 1.0; a.stiffness = 180.0; a.damping = 21.5; a.initialVelocity = 0.0;
+    a.fromValue = [NSValue valueWithPoint:NSPointFromCGPoint(from)];
+    a.toValue = [NSValue valueWithPoint:NSPointFromCGPoint(to)];
+    a.duration = a.settlingDuration;
+    return a;
+}
+
+// Effect token (colour/opacity): a short ease-in-ease-out cross-fade with NO
+// overshoot. Adds a fade CATransition to the view's backing layer so the next
+// redraw dissolves in. Honours Reduce Motion (caller should still set final state).
+static void KakiEffectFade(NSView *v, CGFloat dur) {
+    if (!v) return;
+    if ([[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion]) return;
+    v.wantsLayer = YES;
+    CATransition *t = [CATransition animation];
+    t.type = kCATransitionFade;
+    t.duration = dur;
+    t.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+    [v.layer addAnimation:t forKey:@"kakiEffectFade"];
+}
+
 // Content container layered over the Liquid Glass surface. The glass itself
 // supplies the translucency, refraction and edge lighting, so this view stays
 // transparent — only a whisper-fine hairline to crisp the rounded edge.
@@ -155,12 +180,18 @@ static NSTextField *gColorPanelKanji = nil;
     NSColor *c = [cp.color colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
     if (!c) return;
     goSetColor(c.redComponent, c.greenComponent, c.blueComponent, 1.0);
-    if (gColorPanelKanji) gColorPanelKanji.textColor = c;
+    if (gColorPanelKanji) {
+        KakiEffectFade(gKanji, 0.18); // cross-fade the glyph recolour, no overshoot
+        gColorPanelKanji.textColor = c;
+    }
 }
 @end
 static KakiColorObserver *gColorObserver = nil;
 
 static NSMutableArray *gWidthPills = nil;
+// Shared selection highlight that springs across to the chosen width pill.
+// Sits at the bottom of the backdrop's layer, behind the pill views.
+static CALayer *gWidthInd = nil;
 
 @interface KakiWidthPill : NSView
 @property (nonatomic) CGFloat lineW;     // visual bar thickness
@@ -170,15 +201,11 @@ static NSMutableArray *gWidthPills = nil;
 @end
 @implementation KakiWidthPill
 - (void)drawRect:(NSRect)r {
-    NSBezierPath *bg = [NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:10 yRadius:10];
-    [(self.selected ? [KakiAccent() colorWithAlphaComponent:0.22]
-                    : [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.06]) set];
-    [bg fill];
-    [(self.selected ? KakiAccent() : [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.12]) set];
-    [bg setLineWidth:1.0]; [bg stroke];
+    // The selection highlight is now the shared moving indicator layer (gWidthInd)
+    // behind the pills, so each pill draws only its neutral width bar.
     NSRect bar = NSMakeRect(NSMidX(self.bounds)-9, NSMidY(self.bounds)-self.lineW/2, 18, self.lineW);
     NSBezierPath *line = [NSBezierPath bezierPathWithRoundedRect:bar xRadius:self.lineW/2 yRadius:self.lineW/2];
-    [(self.selected ? KakiAccent() : [NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.92]) set];
+    [[NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:0.92] set];
     [line fill];
 }
 - (void)mouseDown:(NSEvent *)e { if (self.onPick) self.onPick(); }
@@ -239,6 +266,8 @@ static NSMutableArray *gWidthPills = nil;
             [self.layer removeAnimationForKey:@"pulse"];
             self.layer.shadowOpacity = 0;
         }
+        // Effect token: cross-fade the persimmon fill instead of snapping.
+        KakiEffectFade(self, 0.18);
     }
     [self setNeedsDisplay:YES];
 }
@@ -256,6 +285,42 @@ void KakiHUDSetDrawState(int on) {
 - (BOOL)windowShouldClose:(NSWindow *)w { [w orderOut:nil]; return NO; }
 @end
 static KakiHUDDelegate *gHUDDelegate = nil;
+
+// Timer-driven spatial spring for the HUD entrance. We animate the window
+// frame ORIGIN (not the glass layer, which glitches the Liquid Glass effect):
+// the panel starts ~28px above its target and settles down while fading in.
+// Uses the spatial-standard token (k=180, c=21.5, m=1) integrated at 1/120s.
+@interface KakiEntranceAnimator : NSObject
+@property (nonatomic, retain) NSWindow *win;
+@property (nonatomic) NSPoint target;   // final frame origin
+@property (nonatomic) CGFloat offset;   // current y offset above target
+@property (nonatomic) CGFloat vel;      // y-offset velocity
+@property (nonatomic, retain) NSTimer *timer;
+@end
+@implementation KakiEntranceAnimator
+- (void)start {
+    self.timer = [NSTimer scheduledTimerWithTimeInterval:(1.0/120.0)
+                                                  target:self selector:@selector(tick:)
+                                                userInfo:nil repeats:YES];
+}
+- (void)tick:(NSTimer *)t {
+    const CGFloat k = 180.0, c = 21.5, m = 1.0, dt = 1.0/120.0;
+    // Spring toward offset 0 (target). a = (-k*x - c*v) / m.
+    CGFloat a = (-k * self.offset - c * self.vel) / m;
+    self.vel += a * dt;
+    self.offset += self.vel * dt;
+    // Ramp alpha toward 1 as the panel approaches its resting place (28px travel).
+    CGFloat prog = 1.0 - fmin(1.0, fabs(self.offset) / 28.0);
+    self.win.alphaValue = prog;
+    [self.win setFrameOrigin:NSMakePoint(self.target.x, self.target.y + self.offset)];
+    if (fabs(self.offset) < 0.3 && fabs(self.vel) < 0.3) {
+        [self.win setFrameOrigin:self.target];
+        self.win.alphaValue = 1.0;
+        [self.timer invalidate]; self.timer = nil;
+    }
+}
+@end
+static KakiEntranceAnimator *gEntranceAnimator = nil;
 
 // Helper: a borderless label with no background.
 static NSTextField *KakiLabel(NSRect frame, NSFont *font, NSColor *color, NSString *text) {
@@ -309,6 +374,7 @@ NSPanel *KakiMakeHUD(void) {
 
     KakiBackdrop *bg = [[KakiBackdrop alloc] initWithFrame:frame];
     bg.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    bg.wantsLayer = YES; // hosts the moving width-indicator layer
     glass.contentView = bg;
 
     gSwatches = [NSMutableArray array];
@@ -324,6 +390,7 @@ NSPanel *KakiMakeHUD(void) {
 
     void (^applyColor)(CGFloat,CGFloat,CGFloat) = ^(CGFloat r, CGFloat gn, CGFloat b){
         goSetColor(r, gn, b, 1.0);
+        KakiEffectFade(gKanji, 0.18); // cross-fade the glyph recolour, no overshoot
         gKanji.textColor = [NSColor colorWithSRGBRed:r green:gn blue:b alpha:1.0];
     };
 
@@ -363,14 +430,34 @@ NSPanel *KakiMakeHUD(void) {
     CGFloat widths[3] = {2, 5, 10};
     CGFloat bars[3]   = {2, 4, 8};
     CGFloat py = cy - ph / 2.0;
+
+    // Shared selection highlight: a persimmon-tinted rounded rect sized to one
+    // pill, inserted at the bottom of the backdrop's layer so the pill views
+    // (added next) sit in front of it. Positioned at the default pill (index 1).
+    gWidthInd = [CALayer layer];
+    gWidthInd.bounds = CGRectMake(0, 0, pw, ph);
+    gWidthInd.cornerRadius = 10.0;
+    gWidthInd.backgroundColor = [KakiAccent() colorWithAlphaComponent:0.22].CGColor;
+    gWidthInd.borderColor = KakiAccent().CGColor;
+    gWidthInd.borderWidth = 1.0;
+    // Centre of pill index 1, in the backdrop's (flipped-NO) layer coordinates.
+    gWidthInd.position = CGPointMake(xPill + 1*(pw+pgap) + pw/2.0, py + ph/2.0);
+    [bg.layer insertSublayer:gWidthInd atIndex:0];
+
     for (int i = 0; i < 3; i++) {
+        CGPoint centre = CGPointMake(xPill + i*(pw+pgap) + pw/2.0, py + ph/2.0);
         KakiWidthPill *pill = [[KakiWidthPill alloc] initWithFrame:
             NSMakeRect(xPill + i*(pw+pgap), py, pw, ph)];
         pill.lineW = bars[i]; pill.penW = widths[i];
         pill.onPick = ^{
             for (KakiWidthPill *p in gWidthPills) p.selected = NO;
             pill.selected = YES;
-            for (KakiWidthPill *p in gWidthPills) [p setNeedsDisplay:YES];
+            // Spatial token: glide the shared highlight to this pill's centre.
+            if (![[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion]) {
+                CGPoint from = gWidthInd.position;
+                [gWidthInd addAnimation:KakiSpatialPosition(from, centre) forKey:@"slide"];
+            }
+            gWidthInd.position = centre;
             goSetWidth(pill.penW);
         };
         [gWidthPills addObject:pill];
@@ -405,9 +492,28 @@ NSPanel *KakiMakeHUD(void) {
 
     // Position near top-centre of the main screen.
     NSRect scr = [[NSScreen mainScreen] visibleFrame];
-    [panel setFrameOrigin:NSMakePoint(NSMidX(scr) - W/2, NSMaxY(scr) - H - 40)];
+    NSPoint targetOrigin = NSMakePoint(NSMidX(scr) - W/2, NSMaxY(scr) - H - 40);
     if (!gHUDDelegate) gHUDDelegate = [[KakiHUDDelegate alloc] init];
     [panel setDelegate:gHUDDelegate];
-    [panel orderFrontRegardless];
+
+    if ([[NSWorkspace sharedWorkspace] accessibilityDisplayShouldReduceMotion]) {
+        // Reduce Motion: place at target and show, no entrance animation.
+        [panel setFrameOrigin:targetOrigin];
+        panel.alphaValue = 1.0;
+        [panel orderFrontRegardless];
+    } else {
+        // Entrance (spatial): start 28px above the target (screen y is up) and
+        // faded out, order front, then spring the frame ORIGIN down while fading
+        // in. We move the window, never the glass layer, to keep the glass clean.
+        [panel setFrameOrigin:NSMakePoint(targetOrigin.x, targetOrigin.y + 28.0)];
+        panel.alphaValue = 0.0;
+        [panel orderFrontRegardless];
+        gEntranceAnimator = [[KakiEntranceAnimator alloc] init];
+        gEntranceAnimator.win = panel;
+        gEntranceAnimator.target = targetOrigin;
+        gEntranceAnimator.offset = 28.0;
+        gEntranceAnimator.vel = 0.0;
+        [gEntranceAnimator start];
+    }
     return panel;
 }
