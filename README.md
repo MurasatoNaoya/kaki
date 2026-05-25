@@ -1,6 +1,6 @@
 # 柿 kaki
 
-A minimal macOS screen-annotation tool. Toggle draw mode, sketch over anything on screen, and clear it away. Controls live in a single dark-glass "Smoke Bar" built on macOS Liquid Glass.
+A minimal macOS screen-annotation tool. Toggle draw mode, sketch over anything on screen and clear it away. Controls live in a single dark-glass "Smoke Bar" built on macOS Liquid Glass.
 
 Native app: Go core, Objective-C / AppKit shell via cgo. No web views, no Electron.
 
