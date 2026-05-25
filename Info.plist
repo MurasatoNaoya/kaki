@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Kaki</string>
+    <string>kaki</string>
     <key>CFBundleDisplayName</key>
-    <string>Kaki</string>
+    <string>kaki</string>
     <key>CFBundleIdentifier</key>
     <string>com.kaki.app</string>
     <key>CFBundleExecutable</key>
